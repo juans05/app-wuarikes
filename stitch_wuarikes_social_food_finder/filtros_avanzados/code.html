@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Wuarikes - Filtros Avanzados</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-bright": "#f9f9f9",
+                        "secondary-container": "#e6e0ef",
+                        "on-primary-fixed": "#250059",
+                        "primary": "#4f1c9e",
+                        "surface-container": "#eeeeee",
+                        "outline": "#7b7484",
+                        "on-tertiary": "#ffffff",
+                        "surface-variant": "#e2e2e2",
+                        "on-tertiary-fixed-variant": "#5b4300",
+                        "tertiary-fixed-dim": "#fabd00",
+                        "tertiary-container": "#6e5200",
+                        "secondary": "#605d69",
+                        "on-tertiary-container": "#ffc320",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed": "#1c1a25",
+                        "error-container": "#ffdad6",
+                        "tertiary-fixed": "#ffdf9e",
+                        "on-background": "#1a1c1c",
+                        "inverse-surface": "#2f3131",
+                        "on-secondary-container": "#66636f",
+                        "on-tertiary-fixed": "#261a00",
+                        "error": "#ba1a1a",
+                        "primary-fixed-dim": "#d3bbff",
+                        "secondary-fixed": "#e6e0ef",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#673ab7",
+                        "surface-tint": "#6f43c0",
+                        "secondary-fixed-dim": "#c9c4d3",
+                        "tertiary": "#523c00",
+                        "on-surface": "#1a1c1c",
+                        "surface": "#f9f9f9",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-fixed-variant": "#484551",
+                        "on-error": "#ffffff",
+                        "background": "#f9f9f9",
+                        "on-primary-fixed-variant": "#5727a6",
+                        "surface-dim": "#dadada",
+                        "outline-variant": "#ccc3d5",
+                        "surface-container-high": "#e8e8e8",
+                        "surface-container-highest": "#e2e2e2",
+                        "surface-container-low": "#f3f3f3",
+                        "on-primary-container": "#d8c2ff",
+                        "on-surface-variant": "#4a4453",
+                        "primary-fixed": "#ebddff",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#f0f1f1",
+                        "inverse-primary": "#d3bbff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "lg": "24px",
+                        "md": "16px",
+                        "base": "4px",
+                        "container-margin": "20px",
+                        "xl": "32px",
+                        "gutter": "16px",
+                        "xs": "4px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Be Vietnam Pro"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "title-lg": ["Be Vietnam Pro"],
+                        "body-md": ["Be Vietnam Pro"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "label-md": ["Be Vietnam Pro"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                        "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-1px", "fontWeight": "700"}],
+                        "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.5px", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            vertical-align: middle;
+        }
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        .custom-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: #ccc3d5;
+            outline: none;
+            border-radius: 2px;
+        }
+        .custom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #4f1c9e;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-lg min-h-screen flex flex-col items-center">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full max-w-[1200px] z-50 bg-surface flex justify-between items-center px-container-margin py-md border-b border-outline-variant">
+<div class="flex items-center gap-md">
+<a class="p-base hover:bg-secondary-container rounded-full transition-colors" href="../resultados_de_b_squeda/code.html">
+<span class="material-symbols-outlined text-primary">close</span>
+</a>
+<h1 class="font-title-lg text-title-lg text-primary">Filtros</h1>
+</div>
+<button class="font-label-md text-label-md text-primary px-md py-sm hover:bg-secondary-container rounded-lg transition-colors">
+            Limpiar
+        </button>
+</header>
+<!-- Main Content Canvas (Filter Sections) -->
+<main class="w-full max-w-[1200px] pt-[72px] pb-[100px] flex flex-col gap-lg px-container-margin">
+<!-- Section: Categoría -->
+<section class="mt-md">
+<h2 class="font-title-lg text-title-lg mb-md text-on-surface">Categoría</h2>
+<div class="flex flex-wrap gap-sm">
+<button class="px-md py-sm rounded-full bg-primary text-on-primary font-label-md text-label-md">Cevicherías</button>
+<button class="px-md py-sm rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md hover:bg-secondary-container transition-colors">Criolla</button>
+<button class="px-md py-sm rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md hover:bg-secondary-container transition-colors">Cafetería</button>
+<button class="px-md py-sm rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md hover:bg-secondary-container transition-colors">Bars</button>
+<button class="px-md py-sm rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md hover:bg-secondary-container transition-colors">Pollerías</button>
+<button class="px-md py-sm rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md hover:bg-secondary-container transition-colors">Sushis</button>
+</div>
+</section>
+<hr class="border-outline-variant opacity-50"/>
+<!-- Section: Distancia -->
+<section>
+<div class="flex justify-between items-center mb-md">
+<h2 class="font-title-lg text-title-lg text-on-surface">Distancia</h2>
+<span class="font-label-md text-label-md text-primary font-bold">5.0 km</span>
+</div>
+<div class="px-sm">
+<input class="custom-slider" max="15" min="0" type="range" value="5"/>
+<div class="flex justify-between mt-sm">
+<span class="font-label-md text-label-md text-outline">0 km</span>
+<span class="font-label-md text-label-md text-outline">15 km</span>
+</div>
+</div>
+</section>
+<hr class="border-outline-variant opacity-50"/>
+<!-- Section: Rango de Precio -->
+<section>
+<h2 class="font-title-lg text-title-lg mb-md text-on-surface">Rango de Precio</h2>
+<div class="flex w-full bg-surface-container p-xs rounded-xl">
+<button class="flex-1 py-sm text-center font-title-lg text-on-surface-variant hover:bg-secondary-container rounded-lg transition-all active:scale-95">$</button>
+<button class="flex-1 py-sm text-center font-title-lg bg-primary-container text-on-primary-container rounded-lg shadow-sm">$$</button>
+<button class="flex-1 py-sm text-center font-title-lg text-on-surface-variant hover:bg-secondary-container rounded-lg transition-all active:scale-95">$$$</button>
+</div>
+</section>
+<hr class="border-outline-variant opacity-50"/>
+<!-- Section: Calificación -->
+<section>
+<h2 class="font-title-lg text-title-lg mb-md text-on-surface">Calificación</h2>
+<div class="flex gap-sm">
+<button class="px-lg py-sm rounded-xl border border-outline-variant bg-surface flex items-center gap-xs text-on-surface hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-[#FFC107]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md text-label-md">3.0+</span>
+</button>
+<button class="px-lg py-sm rounded-xl border-2 border-primary bg-primary-fixed-dim flex items-center gap-xs text-primary font-bold">
+<span class="material-symbols-outlined text-[#FFC107]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md text-label-md">4.0+</span>
+</button>
+<button class="px-lg py-sm rounded-xl border border-outline-variant bg-surface flex items-center gap-xs text-on-surface hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-[#FFC107]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md text-label-md">4.5+</span>
+</button>
+</div>
+</section>
+<hr class="border-outline-variant opacity-50"/>
+<!-- Section: Servicios (Amenities) -->
+<section>
+<h2 class="font-title-lg text-title-lg mb-md text-on-surface">Servicios</h2>
+<div class="flex flex-wrap gap-sm">
+<button class="flex items-center gap-xs px-md py-sm rounded-xl bg-surface-container text-on-surface-variant hover:bg-primary-fixed transition-colors">
+<span class="material-symbols-outlined text-[18px]">wifi</span>
+<span class="font-label-md text-label-md">Wifi</span>
+</button>
+<button class="flex items-center gap-xs px-md py-sm rounded-xl bg-primary-container text-on-primary-container">
+<span class="material-symbols-outlined text-[18px]">local_parking</span>
+<span class="font-label-md text-label-md">Estacionamiento</span>
+</button>
+<button class="flex items-center gap-xs px-md py-sm rounded-xl bg-surface-container text-on-surface-variant hover:bg-primary-fixed transition-colors">
+<span class="material-symbols-outlined text-[18px]">deck</span>
+<span class="font-label-md text-label-md">Terraza</span>
+</button>
+<button class="flex items-center gap-xs px-md py-sm rounded-xl bg-surface-container text-on-surface-variant hover:bg-primary-fixed transition-colors">
+<span class="material-symbols-outlined text-[18px]">pets</span>
+<span class="font-label-md text-label-md">Pet Friendly</span>
+</button>
+<button class="flex items-center gap-xs px-md py-sm rounded-xl bg-surface-container text-on-surface-variant hover:bg-primary-fixed transition-colors">
+<span class="material-symbols-outlined text-[18px]">music_note</span>
+<span class="font-label-md text-label-md">Música en vivo</span>
+</button>
+</div>
+</section>
+<hr class="border-outline-variant opacity-50"/>
+<!-- Section: Estado -->
+<section class="flex justify-between items-center bg-surface-container-low p-md rounded-2xl border border-outline-variant">
+<div class="flex flex-col">
+<span class="font-title-lg text-on-surface">Abierto ahora</span>
+<span class="font-body-md text-outline">Solo mostrar lugares disponibles</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-outline rounded-full peer peer-focus:ring-4 peer-focus:ring-primary-fixed-dim peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</section>
+</main>
+<!-- Fixed Footer Container -->
+<footer class="fixed bottom-0 w-full max-w-[1200px] p-container-margin bg-surface border-t border-outline-variant flex justify-center">
+<a class="w-full h-14 bg-primary text-on-primary font-title-lg rounded-xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-md no-underline" href="../resultados_de_b_squeda/code.html">
+            Ver 124 resultados
+        </a>
+</footer>
+<!-- Interactive micro-interactions script -->
+<script>
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('click', function() {
+                if (!this.classList.contains('bg-primary') && !this.closest('footer') && !this.closest('header')) {
+                    // Logic for chip toggling
+                    const isSelected = this.classList.contains('bg-primary-container');
+                    if (isSelected) {
+                        this.classList.remove('bg-primary-container', 'text-on-primary-container', 'border-2', 'border-primary');
+                        this.classList.add('bg-surface-container', 'text-on-surface-variant');
+                    } else {
+                        this.classList.add('bg-primary-container', 'text-on-primary-container');
+                        this.classList.remove('bg-surface-container', 'text-on-surface-variant');
+                    }
+                }
+            });
+        });
+
+        const slider = document.querySelector('.custom-slider');
+        const distanceVal = document.querySelector('span.text-primary.font-bold');
+        slider.addEventListener('input', (e) => {
+            distanceVal.textContent = `${e.target.value}.0 km`;
+        });
+    </script>
+</body></html>

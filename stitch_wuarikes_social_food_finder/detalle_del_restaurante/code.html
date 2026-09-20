@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Wuarikes - Detalle de Lugar</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#e2e2e2",
+                    "primary-fixed-dim": "#d3bbff",
+                    "on-tertiary": "#ffffff",
+                    "tertiary": "#523c00",
+                    "surface-dim": "#dadada",
+                    "on-tertiary-fixed-variant": "#5b4300",
+                    "on-secondary-fixed-variant": "#484551",
+                    "surface-container-highest": "#e2e2e2",
+                    "surface-container": "#eeeeee",
+                    "on-background": "#1a1c1c",
+                    "tertiary-container": "#6e5200",
+                    "on-tertiary-fixed": "#261a00",
+                    "on-surface": "#1a1c1c",
+                    "inverse-primary": "#d3bbff",
+                    "outline": "#7b7484",
+                    "on-primary-fixed": "#250059",
+                    "outline-variant": "#ccc3d5",
+                    "secondary": "#605d69",
+                    "secondary-fixed-dim": "#c9c4d3",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed": "#ffdf9e",
+                    "on-primary-container": "#d8c2ff",
+                    "surface-container-high": "#e8e8e8",
+                    "on-secondary-fixed": "#1c1a25",
+                    "on-secondary-container": "#66636f",
+                    "primary": "#4f1c9e",
+                    "on-error-container": "#93000a",
+                    "surface-container-low": "#f3f3f3",
+                    "secondary-container": "#e6e0ef",
+                    "surface-bright": "#f9f9f9",
+                    "surface-container-lowest": "#ffffff",
+                    "on-error": "#ffffff",
+                    "on-surface-variant": "#4a4453",
+                    "inverse-surface": "#2f3131",
+                    "on-tertiary-container": "#ffc320",
+                    "background": "#f9f9f9",
+                    "primary-container": "#673ab7",
+                    "primary-fixed": "#ebddff",
+                    "on-primary": "#ffffff",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed-dim": "#fabd00",
+                    "inverse-on-surface": "#f0f1f1",
+                    "surface": "#f9f9f9",
+                    "secondary-fixed": "#e6e0ef",
+                    "on-primary-fixed-variant": "#5727a6",
+                    "on-secondary": "#ffffff",
+                    "surface-tint": "#6f43c0"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "base": "4px",
+                    "container-margin": "20px",
+                    "xs": "4px",
+                    "sm": "8px",
+                    "md": "16px",
+                    "lg": "24px",
+                    "xl": "32px",
+                    "gutter": "16px"
+            },
+            "fontFamily": {
+                    "body-md": ["Be Vietnam Pro"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "body-lg": ["Be Vietnam Pro"],
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "label-md": ["Be Vietnam Pro"],
+                    "title-lg": ["Be Vietnam Pro"]
+            },
+            "fontSize": {
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-1px", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.5px", "fontWeight": "500"}],
+                    "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .filled-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        .snap-x-mandatory {
+            scroll-snap-type: x mandatory;
+        }
+        .snap-start {
+            scroll-snap-align: start;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md selection:bg-primary-fixed selection:text-on-primary-fixed pb-32">
+<!-- Header / TopAppBar -->
+<header class="bg-surface sticky top-0 z-50 flex justify-between items-center px-container-margin py-md w-full border-b border-outline-variant">
+<div class="flex items-center gap-3">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-secondary-container transition-colors duration-200">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<h1 class="font-display-lg text-title-lg font-bold text-primary">Wuarikes</h1>
+</div>
+<div class="flex items-center gap-2">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-secondary-container transition-colors duration-200">
+<span class="material-symbols-outlined text-primary">share</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-secondary-container transition-colors duration-200">
+<span class="material-symbols-outlined text-primary">favorite</span>
+</button>
+</div>
+</header>
+<main class="max-w-[1200px] mx-auto">
+<!-- Photo Carousel -->
+<section class="relative h-[309px] md:h-[442px] overflow-hidden">
+<div class="flex overflow-x-auto snap-x-mandatory no-scrollbar h-full w-full bg-surface-container">
+<div class="flex-none w-full h-full snap-start relative">
+<img class="w-full h-full object-cover" data-alt="A vibrant, high-angle shot of a classic Peruvian ceviche dish served in a modern, sunlit restaurant in Lima. The fresh fish is garnished with bright red onions, cilantro, and golden corn kernels. The lighting is crisp and natural, highlighting the textures and vibrant colors of the ingredients against a minimalist, white ceramic bowl." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCddOrwwYJ8J05TSKIKZkMUO0eYmBjnOwO-l3CbmZjkyCLmcrr-lTB5sqodSAGlgw-YjcrPk6xQycZWZldna44l6Dc2Cg0c0J6fE9SJLMypxuuty2k-Zeb_ZjDoV2bbrXiUHj_48q0WHEvkm10C1EE4lUduPC9-WM8klXZVpBM2H-EMpDJRkHGIL5-kwhIbzhl7mYqCqmaF-bqPYAFbAiSN-CAK03RANFADo95bTnAbWrsOVoYC569HqHxAg49Zs3gxrbRmCt9boHac"/>
+</div>
+<div class="flex-none w-full h-full snap-start relative">
+<img class="w-full h-full object-cover" data-alt="An atmospheric interior view of a trendy Lima seafood bistro with warm wood accents and industrial-chic lighting. Patrons are seen enjoying plates of seafood under soft, warm spotlights. The aesthetic is modern and sophisticated, with a clean light-mode palette and vibrant pops of green from indoor plants." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0gvRAvVynQuB64bIccHPssMHcFaQuMvF2a2j-gYPmsjpzYFAuJuR5wzC9BmARuFBSvO3oJwFJsQ4JD__h9qyjSKL8ZK0J1rifIqaw8O-kr_HYTUSxhgYoKOBDcY0701iBvaO8ZCJBzb5bxZ4p0ett7ksuAFDAmQ2DPnDNQ2CDGpZ-ZSDqeyxnDuqAfS8ebR8h5sMi58Lxo4VLUVQLPa29PJd29oC9M3YXqagg6NxMml2PHEzUD7qfDzKqgEcwFT0yQQzTlS1iYwpb"/>
+</div>
+<div class="flex-none w-full h-full snap-start relative">
+<img class="w-full h-full object-cover" data-alt="Close-up of a chef's hands masterfully garnishing a plate of Tiradito with a bright yellow ají amarillo sauce. The kitchen in the background is clean and professional, blurred slightly. The image captures the energetic culinary spirit of Lima with high-contrast colors and professional food photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB7qOIQFf-Ks2HQ_qS0g9xC5P_gUBjPLbUxcRM3hKV7sD-kJSNWalQJg9_V4XBwOlca5Vm0sajDSttGUnIcMlRqfn6fWiDpyPyaDHQ3cfzHYO3l7KRY-EaKcqKrUsdfnBRST1GQGyds1DLDzsId0dWdZ3K1sGdOx-OoCfzOzuXV_X-67kuaPpGJBhpvE3AkZLXRB33k3itdBGaKOhOu9DVC8-4ec860GBG23lTJUKLuZah5D8kCEja5KdW8g9h8nE1lFDQAnBFLZ2uV"/>
+</div>
+</div>
+<!-- Indicators -->
+<div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+<div class="w-2 h-2 rounded-full bg-white opacity-100 shadow-sm"></div>
+<div class="w-2 h-2 rounded-full bg-white opacity-40 shadow-sm"></div>
+<div class="w-2 h-2 rounded-full bg-white opacity-40 shadow-sm"></div>
+</div>
+</section>
+<!-- Place Info -->
+<section class="px-container-margin -mt-6 relative z-10">
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl shadow-sm">
+<div class="flex justify-between items-start mb-2">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">La Red del Pescador</h2>
+<span class="material-symbols-outlined text-[#2196F3] filled-icon text-[20px]">verified</span>
+</div>
+<p class="text-secondary font-body-md">Cevichería • Miraflores, Lima</p>
+</div>
+<div class="bg-primary-container text-on-primary-container px-3 py-1 rounded-lg font-bold text-body-lg">
+                        $$$
+                    </div>
+</div>
+<div class="flex items-center gap-1 mb-md">
+<span class="material-symbols-outlined text-[#FFC107] filled-icon">star</span>
+<span class="font-bold text-on-surface text-body-lg">4.8</span>
+<span class="text-secondary text-body-md">(2,450 reseñas)</span>
+</div>
+<!-- Amenities -->
+<div class="flex gap-4 border-t border-outline-variant pt-md overflow-x-auto no-scrollbar">
+<div class="flex flex-col items-center gap-1 min-w-[60px]">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">wifi</span>
+</div>
+<span class="text-label-md font-label-md text-secondary">WiFi</span>
+</div>
+<div class="flex flex-col items-center gap-1 min-w-[60px]">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">local_parking</span>
+</div>
+<span class="text-label-md font-label-md text-secondary">Cochera</span>
+</div>
+<div class="flex flex-col items-center gap-1 min-w-[60px]">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">deck</span>
+</div>
+<span class="text-label-md font-label-md text-secondary">Terraza</span>
+</div>
+<div class="flex flex-col items-center gap-1 min-w-[60px]">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">liquor</span>
+</div>
+<span class="text-label-md font-label-md text-secondary">Bar</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Interactive Map -->
+<section class="px-container-margin mt-lg">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-md">Ubicación</h3>
+<div class="h-48 rounded-xl border border-outline-variant overflow-hidden relative">
+<img class="w-full h-full object-cover" data-location="Lima" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4WDNB_GzDq6zXFbUv5oHI1iNVgFWaXNQIffzjsNuUVyEd9153F2kSS9DlP-Xj1rdDBcDswBJ59LhTz2-57IdOVyKVFpoOrld09Kbe6jHyDroYGwn3cbxe2jmDp8VAVRm-hHntvUk6PUN0ZGWT7KM54owkIgq4nZ_btY78MQZi9VrUuG5qv21ZDkXiLvdXua8H-6Bl20xUiBSM-BnSdQolEd4TNjJOzRuZuHN8kRdSknhjK5NTeIJfLKfonZy4JrucUSfeHfgu8qxd"/>
+<!-- Pin Overlay -->
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="relative">
+<div class="w-12 h-12 rounded-full border-2 border-primary bg-white shadow-xl flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A stylized logo of a modern seafood restaurant featuring a minimalist fish icon and elegant typography in deep purple and white. The design is clean and corporate, fitting a high-end gastronomic application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAO5anEXv8P8wHqCtqPx2O_2xbqMccPFKDNZrk_AX5CYHTuuobiuec1wSij_4RmCGBTsvo8W7jJ29XykllYIidI348jZV1HQsZA-4jflQ0WVm5IQ8nLsbhY4-ntxFU_To8PkAwdG00w4CHGH71CMPJAejqBagt6VBxbxmZxb5FViRaZ3Hn7YQsIc651jx5PhRxsc9DSS9-M-ueUkldDoaxsJMAYI6OcHW9EBgAo5TG9CvqEquEMbtYI82ohhNwPuhYtZEV2vr1Ma5Qs"/>
+</div>
+<div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-primary rotate-45"></div>
+</div>
+</div>
+</div>
+<p class="mt-sm text-body-md text-secondary flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">location_on</span>
+                Av. José Larco 1232, Miraflores 15074, Lima
+            </p>
+</section>
+<!-- Featured Dishes -->
+<section class="mt-xl">
+<div class="flex justify-between items-end px-container-margin mb-md">
+<h3 class="font-title-lg text-title-lg text-on-surface">Platos Destacados</h3>
+<button class="text-primary font-bold text-label-md">Ver Carta</button>
+</div>
+<div class="flex gap-md overflow-x-auto px-container-margin no-scrollbar">
+<!-- Dish Card -->
+<div class="flex-none w-48 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+<div class="h-32">
+<img class="w-full h-full object-cover" data-alt="A beautiful, close-up photograph of a Ceviche de Mercado, showcasing fresh sea bass marinated in lime, served with sweet potato and crisp corn. The lighting is professional studio quality with soft shadows, highlighting the vibrant oranges and whites of the dish." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZXI7jGoAKkDrrSEonnZDkFdUPWU18GWbTGM4JfV68XG1T2IMSDRbx9HO0ejoGediZZIW80y4B789zDTzApX2qhTL3bGmveAgZanA8g0iMJBtORluSrq4KvHwyL4XezywHKzQMxbBAdyRATUzGWJqbkvrPwJUHYDXY_cAQLnxlpxfns3Yh_x-bkHEKNIT4o9GjQGOVgWVtNW8s5-V3M8JpJ538E8e3Ka3MKJHywR9Pm5gsaf6VHNEdfIwcx2ExviVtuKEAxBqPALYA"/>
+</div>
+<div class="p-sm">
+<h4 class="font-bold text-on-surface text-body-md mb-1">Ceviche Clásico</h4>
+<p class="text-primary font-bold text-body-md">S/ 48.00</p>
+</div>
+</div>
+<!-- Dish Card -->
+<div class="flex-none w-48 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+<div class="h-32">
+<img class="w-full h-full object-cover" data-alt="Tiradito de Pescado with creamy yellow pepper sauce, elegantly plated on a minimalist blue dish. Tiny drops of tiger's milk and cilantro oil are visible, creating a sophisticated culinary presentation in a high-key lighting environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAx10Dexz-5OQr1Zsg6TPPYkZaneuhO9EyMB8jzt-MTBRqwPUrMuNMX3tjCBVmSITZWc7vaFrdvGxG-oZ48agGC5d-8MaFBqZMK9EC1P82pmdliDlXpSfbKpSwh65CxeYFhnFQfwU7ne6jlvl9zUaiczUZE6nuofpHyqBBH4HaPtUDa63vf-ukFeDZfiexIXIf8SGaazTjBH9WoXOqeMCfyAOCuUbYHtCpCXTPA2HCr61R2Rz67OA1FN3MAUtCslMBMuIFHej4QA587"/>
+</div>
+<div class="p-sm">
+<h4 class="font-bold text-on-surface text-body-md mb-1">Tiradito Nikkei</h4>
+<p class="text-primary font-bold text-body-md">S/ 52.00</p>
+</div>
+</div>
+<!-- Dish Card -->
+<div class="flex-none w-48 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+<div class="h-32">
+<img class="w-full h-full object-cover" data-alt="Arroz con Mariscos, a hearty Peruvian seafood rice dish packed with shrimp, squid, and scallops. The rice is a deep golden orange, served in a traditional iron skillet. High-contrast, appetizing culinary photography for a modern app." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_O4hdy7N8L3zO_yPceaEXCrFlcUt94UJ2rewq5ZabR1QeeL_SMk_4Pciy_RzQspnLrYkshsUHSD_U1jFu0yVIfFUfbaZaSKCwFxrcsPIoL0wcb5IPhlDLUhixsGHmuJN9jMPUOVwNy3Bv3Qo5-UxZzhQXm0xby24WWsRMKWI2YN2qwiYmNv3huVaQvf0BzrMZ8bTvb8TkreU2Xd_3TZgJuiKGsrpjg5gMVv3FU_p6VDhe1sHvmIOEe22rCaC_6ybx2imAQ1XfM9YU"/>
+</div>
+<div class="p-sm">
+<h4 class="font-bold text-on-surface text-body-md mb-1">Arroz Marisquero</h4>
+<p class="text-primary font-bold text-body-md">S/ 55.00</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Reviews Section -->
+<section class="mt-xl px-container-margin">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-md">Reseñas recientes</h3>
+<div class="flex flex-col gap-lg">
+<!-- Individual Review -->
+<div class="flex flex-col gap-sm">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="A profile portrait of a smiling young Peruvian food enthusiast with a warm, friendly expression. The background is a brightly lit, modern café. The photo is high-quality, professional, and fits a high-end social dining app aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBTrHnSH4zIuIBc1nXntBPLQ601T7zhrT7sbbCybZeHcXrsXCuKdv7x2rCJZj7CyUFrHHS02Imss-LKwkSySV_ygczF97ZwvybJCH2qwcWld85BikT65newbZvxjKQgly4_pY3aPXALa-ur76N_JvqttiGRFqlrF2xQSvppm3hu16oWT7miaXGAaR9iLzboxvNYJmS6HS_dzLFwd7D-4sRBDVxoPgacJaDHfnjiiElw_ac0F62g-3Xuhs6hrJi_p_xbtUtFwSFq-EnJ"/>
+</div>
+<div>
+<p class="font-bold text-on-surface text-body-md">Mateo R.</p>
+<p class="text-secondary text-label-md">Hace 2 días</p>
+</div>
+</div>
+<div class="flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[#FFC107] text-[16px] filled-icon">star</span>
+<span class="material-symbols-outlined text-[#FFC107] text-[16px] filled-icon">star</span>
+<span class="material-symbols-outlined text-[#FFC107] text-[16px] filled-icon">star</span>
+<span class="material-symbols-outlined text-[#FFC107] text-[16px] filled-icon">star</span>
+<span class="material-symbols-outlined text-[#FFC107] text-[16px] filled-icon">star</span>
+</div>
+</div>
+<p class="text-on-surface-variant text-body-md italic">"El mejor ceviche que he probado en Miraflores. La atención fue increíble y el ambiente muy acogedor. El Arroz con Mariscos es un MUST."</p>
+<div class="flex gap-2 overflow-x-auto no-scrollbar pt-xs">
+<div class="w-24 h-24 rounded-lg overflow-hidden flex-none">
+<img class="w-full h-full object-cover" data-alt="A customer's photo of a beautifully garnished seafood platter on a wooden table. The lighting is warm and casual, typical of a dining out experience, yet maintaining professional quality colors." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBahstun85stdXLwJ_wnOrU_CEFptfqEaw_9SONLBIDZcHDgLAZ4YPv52XtJENOKQKcw_ZZtddzzaZIR2xN-PsYyjmLTyOnptcs8GkIc2SabQ-qdgW8WbC4PxN8hA1UOy8LyRGy9ztyM3kwQXkElrvQXFArZ-Xol2gTRU39YF2hLaK7lyP10rz7ZcTbYWP2UjWkO4Nr0KyF83C_HkRLso5qNYR2siFg7uDjX4Y8hNCsVtCq3_2jWb50PQ2looqmTYGip1GvktL_Hrfm"/>
+</div>
+<div class="w-24 h-24 rounded-lg overflow-hidden flex-none">
+<img class="w-full h-full object-cover" data-alt="A refreshing pisco sour cocktail garnished with cinnamon and bitters, sitting on a restaurant table. The condensation on the glass is visible, creating a refreshing and appetizing visual." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8t-OJ80K4YI0vOWN-au0PKGGJQ5LxvVvlBBQxAS0ge0uoscM_KAAYieOljD28yq_77bn4M5ECX6-c5VZe9KqQ57QtYxcrPu-EL9Ig-I1HDOIXphQASBeyCrsKt6RvCSmJJJz0QV04Gz4bfuqKQGk4OreMpWvI78bN6kCFsYWoS5Gwv96U74yq4QAcqF8lz4UgsAFGn7MMAnKQuRIXy7B45fE22RRquqvN_0bwF4mhV7r5d4hXaPcQJ-VU5JfVWcc2MtQYd6yyKWq0"/>
+</div>
+</div>
+</div>
+<!-- Individual Review -->
+<div class="flex flex-col gap-sm">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="A portrait of a stylish woman in her late 20s, smiling warmly. She has a modern, urban aesthetic. The lighting is high-key and natural, giving a clean and authentic feel for a social user profile." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDzGMLrpGBajucGHMB_8C_o0oXZZIen7aG9E2qP2uiUursq-eZ1gwqjUYAT6cs4JKfZfzgcrOCOiSD1fRYTjlp22ehnHNgw97xhyuiQiNMxsJgsAAwYkIva1Fh3-1XsF5ErdzfnzKoAKgcg1W0VSAn3g8lPsA8r3KXlcOMiA7P_mJws5-Fw7vpp3lKvw0hXavWdq45M5276UYmrtsiLg_cvO_ILKWsB8H8QWvJa1GroDBBXxb42_HEQb9AXSOc2EsFAyvsiEAeuvPvi"/>
+</div>
+<div>
+<p class="font-bold text-on-surface text-body-md">Carla V.</p>
+<p class="text-secondary text-label-md">Hace 1 semana</p>
+</div>
+</div>
+<div class="flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[#FFC107] text-[16px] filled-icon">star</span>
+<span class="material-symbols-outlined text-[#FFC107] text-[16px] filled-icon">star</span>
+<span class="material-symbols-outlined text-[#FFC107] text-[16px] filled-icon">star</span>
+<span class="material-symbols-outlined text-[#FFC107] text-[16px] filled-icon">star</span>
+<span class="material-symbols-outlined text-outline-variant text-[16px]">star</span>
+</div>
+</div>
+<p class="text-on-surface-variant text-body-md italic">"Muy buena comida, aunque demoraron un poco en traer los tragos. Volvería de todas maneras por el Tiradito Nikkei."</p>
+</div>
+</div>
+<button class="w-full mt-lg py-md border border-outline text-on-surface font-bold rounded-xl hover:bg-surface-variant transition-colors">
+                Ver todas las reseñas
+            </button>
+</section>
+</main>
+<!-- FAB: Hacer check-in -->
+<div class="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 w-full px-container-margin max-w-md">
+<button class="w-full bg-primary-container text-on-primary-container flex items-center justify-center gap-3 py-4 rounded-full shadow-[0_4px_15px_rgba(103,58,183,0.3)] transition-transform active:scale-95">
+<span class="material-symbols-outlined filled-icon">photo_camera</span>
+<span class="font-bold text-body-lg">Hacer check-in</span>
+</button>
+</div>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center h-20 px-4 pb-safe bg-surface-container-lowest border-t border-outline-variant">
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-4 py-1 transition-transform scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined filled-icon">explore</span>
+<span class="font-label-md text-label-md">Explorar</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary px-4 py-1 transition-transform scale-95 active:scale-90 hover:bg-surface-variant rounded-xl" href="#">
+<span class="material-symbols-outlined">rss_feed</span>
+<span class="font-label-md text-label-md">Feed</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary px-4 py-1 transition-transform scale-95 active:scale-90 hover:bg-surface-variant rounded-xl" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md">Perfil</span>
+</a>
+</nav>
+<script>
+        // Simple micro-interaction for the carousel
+        const carousel = document.querySelector('.snap-x-mandatory');
+        const dots = document.querySelectorAll('.absolute.bottom-4 div');
+        
+        carousel.addEventListener('scroll', () => {
+            const index = Math.round(carousel.scrollLeft / carousel.offsetWidth);
+            dots.forEach((dot, i) => {
+                dot.style.opacity = i === index ? '1' : '0.4';
+            });
+        });
+
+        // Add scroll animation to the FAB on scroll down
+        let lastScroll = 0;
+        const fab = document.querySelector('.fixed.bottom-24');
+        window.addEventListener('scroll', () => {
+            const currentScroll = window.pageYOffset;
+            if (currentScroll > lastScroll && currentScroll > 200) {
+                fab.style.transform = 'translate(-50%, 150%)';
+            } else {
+                fab.style.transform = 'translate(-50%, 0)';
+            }
+            fab.style.transition = 'transform 0.3s ease-out';
+            lastScroll = currentScroll;
+        });
+    </script>
+</body></html>

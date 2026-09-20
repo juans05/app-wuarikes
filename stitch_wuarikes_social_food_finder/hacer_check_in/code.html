@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Wuarikes - Nuevo Check-in</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#e2e2e2",
+                    "primary-fixed-dim": "#d3bbff",
+                    "on-tertiary": "#ffffff",
+                    "tertiary": "#523c00",
+                    "surface-dim": "#dadada",
+                    "on-tertiary-fixed-variant": "#5b4300",
+                    "on-secondary-fixed-variant": "#484551",
+                    "surface-container-highest": "#e2e2e2",
+                    "surface-container": "#eeeeee",
+                    "on-background": "#1a1c1c",
+                    "tertiary-container": "#6e5200",
+                    "on-tertiary-fixed": "#261a00",
+                    "on-surface": "#1a1c1c",
+                    "inverse-primary": "#d3bbff",
+                    "outline": "#7b7484",
+                    "on-primary-fixed": "#250059",
+                    "outline-variant": "#ccc3d5",
+                    "secondary": "#605d69",
+                    "secondary-fixed-dim": "#c9c4d3",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed": "#ffdf9e",
+                    "on-primary-container": "#d8c2ff",
+                    "surface-container-high": "#e8e8e8",
+                    "on-secondary-fixed": "#1c1a25",
+                    "on-secondary-container": "#66636f",
+                    "primary": "#4f1c9e",
+                    "on-error-container": "#93000a",
+                    "surface-container-low": "#f3f3f3",
+                    "secondary-container": "#e6e0ef",
+                    "surface-bright": "#f9f9f9",
+                    "surface-container-lowest": "#ffffff",
+                    "on-error": "#ffffff",
+                    "on-surface-variant": "#4a4453",
+                    "inverse-surface": "#2f3131",
+                    "on-tertiary-container": "#ffc320",
+                    "background": "#f9f9f9",
+                    "primary-container": "#673ab7",
+                    "primary-fixed": "#ebddff",
+                    "on-primary": "#ffffff",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed-dim": "#fabd00",
+                    "inverse-on-surface": "#f0f1f1",
+                    "surface": "#f9f9f9",
+                    "secondary-fixed": "#e6e0ef",
+                    "on-primary-fixed-variant": "#5727a6",
+                    "on-secondary": "#ffffff",
+                    "surface-tint": "#6f43c0"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "base": "4px",
+                    "container-margin": "20px",
+                    "xs": "4px",
+                    "sm": "8px",
+                    "md": "16px",
+                    "lg": "24px",
+                    "xl": "32px",
+                    "gutter": "16px"
+            },
+            "fontFamily": {
+                    "body-md": ["Be Vietnam Pro"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "body-lg": ["Be Vietnam Pro"],
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "label-md": ["Be Vietnam Pro"],
+                    "title-lg": ["Be Vietnam Pro"]
+            },
+            "fontSize": {
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-1px", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.5px", "fontWeight": "500"}],
+                    "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .star-active {
+            font-variation-settings: 'FILL' 1;
+            color: #FFC107;
+        }
+        .reward-pulse {
+            animation: pulse-reward 2s infinite;
+        }
+        @keyframes pulse-reward {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(103, 58, 183, 0.4); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(103, 58, 183, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(103, 58, 183, 0); }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col items-center">
+<!-- Top Navigation Header (Standard Shell suppressed due to task-focused context) -->
+<header class="w-full max-w-lg bg-surface flex items-center justify-between px-container-margin py-md sticky top-0 z-50">
+<div class="flex items-center gap-md">
+<button aria-label="Volver" class="p-xs rounded-full hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-on-surface">close</span>
+</button>
+<h1 class="font-title-lg text-title-lg text-on-surface">Nuevo Check-in</h1>
+</div>
+<div class="reward-pulse bg-primary-container text-white px-md py-1 rounded-full flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">stars</span>
+<span class="font-label-md text-label-md">+10 pts</span>
+</div>
+</header>
+<main class="w-full max-w-lg flex flex-col gap-lg px-container-margin py-lg pb-xl">
+<!-- Header: Place Context -->
+<section class="flex items-center gap-md p-md bg-white border border-outline-variant rounded-xl shadow-sm">
+<div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A macro close-up of a vibrant Peruvian Ceviche dish, with fresh lime juice, red onions, and cilantro, served in a modern white ceramic bowl. The lighting is bright and natural, reflecting a high-end Lima culinary aesthetic with clean whites and vivid food colors. Sharp focus on the texture of the fish against a minimalist background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuABt8ENDjHkAK6oNWvwdYOSeHcXLvha9FkQLEMxVDvDk4k0HIujYr3lxX4wwsM2v101LoTsMJBbCnqkxOSOdMsAbwCxq0bTWVx2knnPviK4FOAWRsbV7j9HNT8mHvUJENAUgnPGZx1bq4mFuaYAFozAy3evXl2-paiPX5WmncA5RdvGlvqM1JubW04RUSdrpNCTe6pANJLhcnUd9j2U-e0fvIy_rZZ_jzIPRiIduwqwFHJ_ElKNnmStw4SNtv_GUjKa5IHygRoIipjB"/>
+</div>
+<div class="flex flex-col">
+<h2 class="font-title-lg text-title-lg text-primary">La Mar - Cebichería</h2>
+<p class="font-body-md text-body-md text-secondary">Miraflores, Lima</p>
+</div>
+</section>
+<!-- Rating Selector -->
+<section class="flex flex-col items-center gap-md">
+<p class="font-label-md text-label-md text-secondary uppercase tracking-widest">¿Qué tal estuvo tu experiencia?</p>
+<div class="flex gap-sm" id="star-selector">
+<button class="star-btn transition-all active:scale-90" data-value="1">
+<span class="material-symbols-outlined text-[48px] text-surface-variant">star</span>
+</button>
+<button class="star-btn transition-all active:scale-90" data-value="2">
+<span class="material-symbols-outlined text-[48px] text-surface-variant">star</span>
+</button>
+<button class="star-btn transition-all active:scale-90" data-value="3">
+<span class="material-symbols-outlined text-[48px] text-surface-variant">star</span>
+</button>
+<button class="star-btn transition-all active:scale-90" data-value="4">
+<span class="material-symbols-outlined text-[48px] text-surface-variant">star</span>
+</button>
+<button class="star-btn transition-all active:scale-90" data-value="5">
+<span class="material-symbols-outlined text-[48px] text-surface-variant">star</span>
+</button>
+</div>
+<p class="font-body-md text-body-md text-primary font-medium h-5" id="rating-label"></p>
+</section>
+<!-- Photo Upload -->
+<section class="flex flex-col gap-sm">
+<div class="flex justify-between items-center">
+<label class="font-label-md text-label-md text-secondary uppercase tracking-widest">Fotos del Wuarike</label>
+<span class="bg-tertiary-fixed text-tertiary font-label-md text-label-md px-sm py-1 rounded-lg">+15 pts con foto</span>
+</div>
+<div class="grid grid-cols-3 gap-sm">
+<button class="aspect-square border-2 border-dashed border-outline-variant rounded-xl flex flex-col items-center justify-center gap-xs hover:bg-surface-container transition-colors group">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">add_a_photo</span>
+<span class="font-label-md text-label-md text-outline group-hover:text-primary">Subir</span>
+</button>
+<div class="aspect-square relative group">
+<img class="w-full h-full object-cover rounded-xl border border-outline-variant" data-alt="A professional food photography shot of a perfectly grilled 'Anticucho de Corazon' skewer, glistening with a smoky ají panca glaze. The dish is presented on a minimalist stone plate in a trendy Lima restaurant setting. Warm ambient light creates a rich, appetizing atmosphere. Contemporary Lima dining style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuABopVv8z5CiHjqbLtWj0bRIZ7lunQ6754D2OHnqOeULXcYYn5kyj-gIgy2ETNirHLSogbob5DKl8pm9YuheHnmjNqWmNkC0hesmJczUha4_81CTJEFfBMcrSqkRGcrDZQn0V7EVCUmm5nxlcsvI5tgPIv7cYd_iIrZQkTng3rbKR3BSp0LU6vuOyrn-sAx8Z_4nO9Qzh-37J9ducV23Y2YXRqmY__YkySWwEDLU7sd-1oEXUAic_kF_ajjUHpuDdfn5NQVZbCAigF7"/>
+<button class="absolute top-1 right-1 bg-white/80 rounded-full p-xs backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-error text-[18px]">delete</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Comment Box -->
+<section class="flex flex-col gap-sm">
+<label class="font-label-md text-label-md text-secondary uppercase tracking-widest" for="review-comment">Tu Comentario</label>
+<div class="relative">
+<textarea class="w-full min-h-[120px] p-md bg-white border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all text-body-md placeholder:text-outline resize-none" id="review-comment" maxlength="140" placeholder="Cuéntanos qué pediste y si lo recomendarías..."></textarea>
+<div class="absolute bottom-3 right-3">
+<span class="font-label-md text-label-md text-outline" id="char-count">0 / 140</span>
+</div>
+</div>
+</section>
+<!-- Submit Button -->
+<section class="mt-md">
+<button class="w-full bg-primary-container text-white py-lg rounded-xl font-title-lg text-title-lg shadow-lg hover:shadow-xl hover:bg-primary transition-all active:scale-[0.98] flex items-center justify-center gap-md">
+                Publicar Check-in
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">send</span>
+</button>
+<p class="mt-md text-center text-secondary font-label-md text-label-md">Publicarás esta reseña en tu feed de comunidad.</p>
+</section>
+</main>
+<script>
+        // Character Counter Logic
+        const textarea = document.getElementById('review-comment');
+        const charCount = document.getElementById('char-count');
+        
+        textarea.addEventListener('input', (e) => {
+            const length = e.target.value.length;
+            charCount.textContent = `${length} / 140`;
+            if (length >= 130) {
+                charCount.classList.add('text-error');
+                charCount.classList.remove('text-outline');
+            } else {
+                charCount.classList.remove('text-error');
+                charCount.classList.add('text-outline');
+            }
+        });
+
+        // Star Rating Logic
+        const stars = document.querySelectorAll('.star-btn');
+        const ratingLabel = document.getElementById('rating-label');
+        const labels = {
+            '1': 'Podría mejorar 🤨',
+            '2': 'Pasable 😐',
+            '3': 'Bueno 🙂',
+            '4': '¡Muy rico! 😋',
+            '5': '¡Una joya! 🔥'
+        };
+
+        stars.forEach((star, index) => {
+            star.addEventListener('click', () => {
+                const val = star.getAttribute('data-value');
+                ratingLabel.textContent = labels[val];
+                
+                stars.forEach((s, i) => {
+                    const icon = s.querySelector('.material-symbols-outlined');
+                    if (i <= index) {
+                        icon.classList.add('star-active');
+                        icon.classList.remove('text-surface-variant');
+                        s.style.transform = `scale(${1 + (i*0.05)})`;
+                    } else {
+                        icon.classList.remove('star-active');
+                        icon.classList.add('text-surface-variant');
+                        s.style.transform = 'scale(1)';
+                    }
+                });
+            });
+        });
+    </script>
+</body></html>

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Wuarikes - Resultados de Búsqueda</title>
+<!-- Google Fonts: Plus Jakarta Sans & Be Vietnam Pro -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-fixed": "#ffdf9e",
+                    "inverse-on-surface": "#f0f1f1",
+                    "inverse-primary": "#d3bbff",
+                    "surface-container-lowest": "#ffffff",
+                    "outline-variant": "#ccc3d5",
+                    "surface-variant": "#e2e2e2",
+                    "on-primary-fixed": "#250059",
+                    "primary-container": "#673ab7",
+                    "outline": "#7b7484",
+                    "tertiary-fixed-dim": "#fabd00",
+                    "tertiary-container": "#6e5200",
+                    "secondary-fixed-dim": "#c9c4d3",
+                    "on-surface": "#1a1c1c",
+                    "primary": "#4f1c9e",
+                    "on-secondary-fixed": "#1c1a25",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed-variant": "#5727a6",
+                    "on-surface-variant": "#4a4453",
+                    "on-secondary-container": "#66636f",
+                    "on-tertiary-container": "#ffc320",
+                    "primary-fixed-dim": "#d3bbff",
+                    "on-tertiary-fixed": "#261a00",
+                    "on-secondary": "#ffffff",
+                    "secondary-fixed": "#e6e0ef",
+                    "error-container": "#ffdad6",
+                    "on-background": "#1a1c1c",
+                    "background": "#f9f9f9",
+                    "surface-bright": "#f9f9f9",
+                    "primary-fixed": "#ebddff",
+                    "on-tertiary": "#ffffff",
+                    "surface-container": "#eeeeee",
+                    "inverse-surface": "#2f3131",
+                    "secondary": "#605d69",
+                    "error": "#ba1a1a",
+                    "on-primary-container": "#d8c2ff",
+                    "surface-container-low": "#f3f3f3",
+                    "surface": "#f9f9f9",
+                    "secondary-container": "#e6e0ef",
+                    "tertiary": "#523c00",
+                    "surface-container-highest": "#e2e2e2",
+                    "on-tertiary-fixed-variant": "#5b4300",
+                    "on-secondary-fixed-variant": "#484551",
+                    "surface-tint": "#6f43c0",
+                    "surface-dim": "#dadada",
+                    "on-error-container": "#93000a",
+                    "on-error": "#ffffff",
+                    "surface-container-high": "#e8e8e8"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "12px",
+                    "2xl": "16px",
+                    "3xl": "24px",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "lg": "24px",
+                    "base": "4px",
+                    "sm": "8px",
+                    "xl": "32px",
+                    "md": "16px",
+                    "container-margin": "20px",
+                    "xs": "4px",
+                    "gutter": "16px"
+            },
+            "fontFamily": {
+                    "label-md": ["Be Vietnam Pro"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "body-md": ["Be Vietnam Pro"],
+                    "body-lg": ["Be Vietnam Pro"],
+                    "title-lg": ["Be Vietnam Pro"]
+            },
+            "fontSize": {
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.5px", "fontWeight": "500"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-1px", "fontWeight": "700"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #FAFAFA;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body-md text-on-surface antialiased">
+<!-- Top Navigation Bar (Search State) -->
+<header class="sticky top-0 z-50 bg-surface dark:bg-surface-dim border-b border-outline-variant dark:border-outline flex justify-between items-center px-container-margin py-md w-full">
+<div class="flex items-center gap-md w-full">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-secondary-container transition-colors">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<div class="flex-1 h-12 bg-surface-container-low rounded-2xl flex items-center px-md gap-sm border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant">search</span>
+<span class="font-body-lg text-body-lg text-on-surface">Cebicherías</span>
+</div>
+<a class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-secondary-container transition-colors" href="../explorar_mapa_optimizado/code.html">
+<span class="material-symbols-outlined text-primary">tune</span>
+</a>
+</div>
+</header>
+<!-- Filter Chips Area -->
+<section class="bg-surface py-md">
+<div class="flex gap-sm px-container-margin overflow-x-auto hide-scrollbar">
+<!-- Active Chip -->
+<button class="flex items-center gap-xs px-md py-sm bg-primary-container text-on-primary-container rounded-xl font-label-md text-label-md whitespace-nowrap">
+                Cebicherías <span class="material-symbols-outlined text-[16px]">close</span>
+</button>
+<button class="flex items-center gap-xs px-md py-sm bg-primary-container text-on-primary-container rounded-xl font-label-md text-label-md whitespace-nowrap">
+                Abierto ahora <span class="material-symbols-outlined text-[16px]">close</span>
+</button>
+<button class="flex items-center gap-xs px-md py-sm bg-primary-container text-on-primary-container rounded-xl font-label-md text-label-md whitespace-nowrap">
+                $$ <span class="material-symbols-outlined text-[16px]">close</span>
+</button>
+<!-- Inactive/New Chip -->
+<button class="flex items-center gap-xs px-md py-sm bg-surface-container-lowest border border-outline-variant text-on-surface-variant rounded-xl font-label-md text-label-md whitespace-nowrap hover:bg-surface-container transition-colors">
+                Más filtros <span class="material-symbols-outlined text-[16px]">add</span>
+</button>
+</div>
+</section>
+<!-- Results Indicator -->
+<div class="px-container-margin pb-md">
+<h2 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">124 huariques encontrados</h2>
+</div>
+<!-- Main Content: Results List -->
+<main class="px-container-margin space-y-lg pb-32">
+<!-- Result Card 1 -->
+<article class="bg-surface-container-lowest rounded-3xl border border-outline-variant overflow-hidden group hover:shadow-lg transition-shadow duration-300">
+<div class="relative h-56 overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-700" data-alt="A vibrant Peruvian cebiche plate presented in a rustic clay bowl. Fresh lime juice, bright red chili slices, and purple onions are glistening under soft morning sunlight in a high-end Limeñan huarique setting. The background shows a modern, minimalist restaurant interior with light wooden textures and pops of deep purple branding. High-contrast colors and professional culinary photography style." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCfdE52khCyjLT30K08o147hHV4vbUsPUFXx5A6RocNJ33nPM8hr6Jr3nANzQZDYRt8wQeEq0i7sO-lmEBjPnUay2qLhPm-FrxfG5UC_qAfSwq3fhqoi5BOYiN8vDpEQOnOqbNZnehx5auIfedWBEbGtV8qbcVcG0SljJCVD9XXYHvlOtUX6yiRKfd2G4OQy8D8BX0fgbr6cZyqnm2k8vqiNhh8lo1j7g1VbrUcxSdx6h_q8mATqfLhfE86lo-5WpcRB8KgQPmn07qd')"></div>
+<div class="absolute top-md right-md bg-surface-container-lowest/90 backdrop-blur-md p-sm rounded-xl">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</div>
+</div>
+<div class="p-lg">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-title-lg text-title-lg text-on-surface">La Red de Pescador</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Cebichería • Surquillo</p>
+</div>
+<div class="flex items-center bg-tertiary-fixed text-on-tertiary-fixed px-sm py-xs rounded-lg gap-xs">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md text-label-md font-bold">4.8</span>
+</div>
+</div>
+<div class="mt-md flex items-center gap-lg">
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">location_on</span>
+<span class="font-label-md text-label-md">1.2 km</span>
+</div>
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">payments</span>
+<span class="font-label-md text-label-md">$$</span>
+</div>
+</div>
+<div class="mt-lg flex gap-sm">
+<span class="px-md py-xs bg-surface-container border border-outline-variant rounded-full font-label-md text-label-md flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px]">wifi</span> Wifi
+                    </span>
+<span class="px-md py-xs bg-surface-container border border-outline-variant rounded-full font-label-md text-label-md flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px]">deck</span> Terraza
+                    </span>
+</div>
+</div>
+</article>
+<!-- Result Card 2 -->
+<article class="bg-surface-container-lowest rounded-3xl border border-outline-variant overflow-hidden group hover:shadow-lg transition-shadow duration-300">
+<div class="relative h-56 overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-700" data-alt="An atmospheric evening shot of a trendy Peruvian huarique entrance in Miraflores. The doorway is adorned with industrial warm lights and hanging plants. A sign with bold white typography and purple accents glows softly. The aesthetic is clean, modern corporate with high-contrast energy, showcasing a bustling yet organized urban food scene. The lighting creates a welcoming, premium light-mode vibe." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA-_0uIxqzpGbz9KHM7_4UDLC-83cBpEFwVNq8D8XG_wcngEiaQErwNE34BzwbhxhYehAZtj8bfrxUGAdKTpHfW86l6U2q3c0k9koxjCs6GfdYPm82sXpQs6HiccXc8Bt0pAgQQ1eckiLE4qsNDoU9FpNICXGk97uM-hKduw-0AADochc3gv8qHLO1TndsDMHhY1rIM0iOsGKP6tW2u7DBnR8Z5ck3dxdX9w0OPtVEYOFWm0D7aJGCu29yyXiOyrgklhZjNapP5Al2V')"></div>
+<div class="absolute top-md right-md bg-surface-container-lowest/90 backdrop-blur-md p-sm rounded-xl">
+<span class="material-symbols-outlined text-primary">favorite</span>
+</div>
+</div>
+<div class="p-lg">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-title-lg text-title-lg text-on-surface">Pescados Capitales</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Cebichería Fusion • Miraflores</p>
+</div>
+<div class="flex items-center bg-tertiary-fixed text-on-tertiary-fixed px-sm py-xs rounded-lg gap-xs">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md text-label-md font-bold">4.6</span>
+</div>
+</div>
+<div class="mt-md flex items-center gap-lg">
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">location_on</span>
+<span class="font-label-md text-label-md">2.5 km</span>
+</div>
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">payments</span>
+<span class="font-label-md text-label-md">$$$</span>
+</div>
+</div>
+<div class="mt-lg flex gap-sm">
+<span class="px-md py-xs bg-surface-container border border-outline-variant rounded-full font-label-md text-label-md flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px]">local_parking</span> Parking
+                    </span>
+<span class="px-md py-xs bg-surface-container border border-outline-variant rounded-full font-label-md text-label-md flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px]">pets</span> Pet Friendly
+                    </span>
+</div>
+</div>
+</article>
+<!-- Result Card 3 -->
+<article class="bg-surface-container-lowest rounded-3xl border border-outline-variant overflow-hidden group hover:shadow-lg transition-shadow duration-300">
+<div class="relative h-56 overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-700" data-alt="A close-up of 'Arroz con Mariscos', a traditional Peruvian seafood rice dish, served on a white ceramic plate. The rice is a deep golden orange, topped with fresh coriander and large grilled prawns. The lighting is bright and airy, reflecting a high-end culinary experience. The surrounding table features minimalist decor with subtle purple napkins, aligning with the Wuarikes brand identity." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDy_-h4OH8MJLcNOYARyeckBGlBaB2A7OUH8DyXYg81YTtXV8sVB8hwZ16g2uPTDtPlwzp3u7FBZEuBp9J40VEAmuPOReyKZ0AuodPkqYfUpPsd16az_X-pay-KInJoFpM8I4CU9EqtE8pdBYevLExen2OZhu0Y26Qj1ZXl6VsOIU4thbDhY0lP5r6UHUgrkOo8EQ_XE1rbycLQyxfr--hQOqDbmMVleh6jpQ-u9LNaGC6WtSveRj9pQ9G_h0qI3mZIgcvKvgpctfVs')"></div>
+<div class="absolute top-md right-md bg-surface-container-lowest/90 backdrop-blur-md p-sm rounded-xl">
+<span class="material-symbols-outlined text-primary">favorite</span>
+</div>
+</div>
+<div class="p-lg">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-title-lg text-title-lg text-on-surface">Cebichería El Verídico</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Tradicional • La Victoria</p>
+</div>
+<div class="flex items-center bg-tertiary-fixed text-on-tertiary-fixed px-sm py-xs rounded-lg gap-xs">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md text-label-md font-bold">4.9</span>
+</div>
+</div>
+<div class="mt-md flex items-center gap-lg">
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">location_on</span>
+<span class="font-label-md text-label-md">4.1 km</span>
+</div>
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">payments</span>
+<span class="font-label-md text-label-md">$$</span>
+</div>
+</div>
+<div class="mt-lg flex gap-sm">
+<span class="px-md py-xs bg-surface-container border border-outline-variant rounded-full font-label-md text-label-md flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px]">ac_unit</span> Aire Acond.
+                    </span>
+</div>
+</div>
+</article>
+</main>
+<!-- Floating Action Button: View on Map -->
+<div class="fixed bottom-28 left-0 right-0 flex justify-center z-40 pointer-events-none">
+<a class="pointer-events-auto bg-primary-container text-on-primary-container px-lg py-md rounded-full shadow-lg flex items-center gap-sm hover:scale-105 active:scale-95 transition-transform duration-200 no-underline" href="../explorar_mapa_optimizado/code.html">
+<span class="material-symbols-outlined">map</span>
+<span class="font-title-lg text-body-lg font-bold">Ver en mapa</span>
+</a>
+</div>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center h-20 px-4 pb-safe bg-surface-container-lowest border-t border-outline-variant">
+<!-- Explorar (Active) -->
+<a class="flex flex-col items-center justify-center bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-xl px-4 py-1 transition-transform scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">explore</span>
+<span class="font-label-md text-label-md">Explorar</span>
+</a>
+<!-- Feed (Inactive) -->
+<a class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim px-4 py-1 hover:bg-surface-variant transition-transform scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined">rss_feed</span>
+<span class="font-label-md text-label-md">Feed</span>
+</a>
+<!-- Perfil (Inactive) -->
+<a class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim px-4 py-1 hover:bg-surface-variant transition-transform scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md">Perfil</span>
+</a>
+</nav>
+<script>
+        // Simple micro-interaction for cards
+        document.querySelectorAll('article').forEach(card => {
+            card.addEventListener('touchstart', () => {
+                card.style.transform = 'scale(0.98)';
+            });
+            card.addEventListener('touchend', () => {
+                card.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body></html>

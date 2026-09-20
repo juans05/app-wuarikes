@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Perfil - Wuarikes</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e2e2e2",
+                        "primary-fixed-dim": "#d3bbff",
+                        "on-tertiary": "#ffffff",
+                        "tertiary": "#523c00",
+                        "surface-dim": "#dadada",
+                        "on-tertiary-fixed-variant": "#5b4300",
+                        "on-secondary-fixed-variant": "#484551",
+                        "surface-container-highest": "#e2e2e2",
+                        "surface-container": "#eeeeee",
+                        "on-background": "#1a1c1c",
+                        "tertiary-container": "#6e5200",
+                        "on-tertiary-fixed": "#261a00",
+                        "on-surface": "#1a1c1c",
+                        "inverse-primary": "#d3bbff",
+                        "outline": "#7b7484",
+                        "on-primary-fixed": "#250059",
+                        "outline-variant": "#ccc3d5",
+                        "secondary": "#605d69",
+                        "secondary-fixed-dim": "#c9c4d3",
+                        "error-container": "#ffdad6",
+                        "tertiary-fixed": "#ffdf9e",
+                        "on-primary-container": "#d8c2ff",
+                        "surface-container-high": "#e8e8e8",
+                        "on-secondary-fixed": "#1c1a25",
+                        "on-secondary-container": "#66636f",
+                        "primary": "#4f1c9e",
+                        "on-error-container": "#93000a",
+                        "surface-container-low": "#f3f3f3",
+                        "secondary-container": "#e6e0ef",
+                        "surface-bright": "#f9f9f9",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error": "#ffffff",
+                        "on-surface-variant": "#4a4453",
+                        "inverse-surface": "#2f3131",
+                        "on-tertiary-container": "#ffc320",
+                        "background": "#f9f9f9",
+                        "primary-container": "#673ab7",
+                        "primary-fixed": "#ebddff",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed-dim": "#fabd00",
+                        "inverse-on-surface": "#f0f1f1",
+                        "surface": "#f9f9f9",
+                        "secondary-fixed": "#e6e0ef",
+                        "on-primary-fixed-variant": "#5727a6",
+                        "on-secondary": "#ffffff",
+                        "surface-tint": "#6f43c0"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "container-margin": "20px",
+                        "xs": "4px",
+                        "sm": "8px",
+                        "md": "16px",
+                        "lg": "24px",
+                        "xl": "32px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Be Vietnam Pro"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-lg": ["Be Vietnam Pro"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "label-md": ["Be Vietnam Pro"],
+                        "title-lg": ["Be Vietnam Pro"]
+                    },
+                    "fontSize": {
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-1px", "fontWeight": "700"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.5px", "fontWeight": "500"}],
+                        "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Be Vietnam Pro', sans-serif; background-color: #f9f9f9; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(8px); border: 1px solid #eeeeee; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen pb-24">
+<!-- Top Navigation Anchor -->
+<header class="bg-surface dark:bg-surface-dim flex justify-between items-center px-container-margin py-md w-full border-b border-outline-variant dark:border-outline fixed top-0 z-50">
+<h1 class="font-display-lg text-headline-lg-mobile font-bold text-primary dark:text-primary-fixed-dim">Wuarikes</h1>
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined p-2 text-primary hover:bg-secondary-container rounded-full transition-colors">search</button>
+<div class="w-10 h-10 rounded-full border-2 border-primary overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional studio portrait of a stylish young Peruvian foodie with a warm smile, wearing a modern linen shirt. The lighting is soft and cinematic, emphasizing a clean, high-contrast light mode aesthetic. The background is a minimalist, blurred urban environment in Lima, reflecting a sophisticated and reliable brand identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiinDohBUhr3BPVPg21LVL6W7zwy4DSxalehtZ_TVFYaFn7RNXrEZLi-p8Lc7YVr1dMHlRcGD4dncdgAwhFEGorMSinUxMomqdF0IZjHtWGWS0KmZlqktzcwcRhojLOk1hpBfjTAith-1LMThjLbrHgoLtg3MilTiM-Hapd_YO4CqM-2XLIApsRD1CvMuD2JTrByCAm32hqnfIziv46n_A8nICZRn6aqhyKiXWYmmzJcYKX_-tpafSKDpkInQOieFZ-UxVpbiyAbAD"/>
+</div>
+</div>
+</header>
+<main class="pt-24 px-container-margin max-w-screen-xl mx-auto space-y-lg">
+<!-- Header Profile Section -->
+<section class="flex flex-col md:flex-row items-center gap-lg md:gap-xl">
+<div class="relative">
+<div class="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-primary p-1 bg-white">
+<div class="w-full h-full rounded-full overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A close-up profile picture of a young male explorer with dark hair, glowing skin, and an adventurous look. He is set against a vibrant, out-of-focus background of a colorful Peruvian street market. The visual style is crisp, high-contrast, and modern, using the primary brand color of deep purple as a subtle accent in the surroundings." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsz0_lXvHRF-RskeiF2KaCSSqCXR8EVBEaFI51RjK5JOLkS5uj0wyYquES99KQGT4QqaovmoAq_tkePkaYaGcRAT8s7XO8blaeZpk7tJoNxbaZUEH0_WmDm0r8Wi2lX1cxnUQgWj2tWBn6LoQ1Y1zRP2tQ8SPmA1sffZmndmtBunt5YwRsXE8qdmWqQ5HBBxWUAf977FfUbnJk04bHVRKv733wImOAeMvFuwwQgzTpsM0KwS69tkxfjQ19W3Rj1aV-mTNo4cf0PhRp"/>
+</div>
+</div>
+<div class="absolute bottom-1 right-1 bg-tertiary-fixed-dim text-tertiary p-1.5 rounded-full border-2 border-white shadow-md">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+</div>
+<div class="flex-1 w-full space-y-sm text-center md:text-left">
+<div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile md:text-headline-lg font-bold text-primary">Rodrigo Gastón</h2>
+<p class="font-title-lg text-title-lg text-secondary">Explorador Oro</p>
+</div>
+<div class="w-full md:max-w-md bg-surface-container rounded-full h-3 overflow-hidden">
+<div class="bg-primary h-full w-[72%] rounded-full shadow-[0_0_8px_rgba(103,58,183,0.3)]"></div>
+</div>
+<p class="font-label-md text-label-md text-outline">720 / 1000 XP para Nivel Platino</p>
+</div>
+</section>
+<!-- Metric Cards Grid -->
+<section class="grid grid-cols-3 gap-gutter">
+<div class="bg-white border border-[#eeeeee] p-md rounded-xl text-center space-y-xs hover:border-primary/30 transition-colors">
+<span class="font-label-md text-label-md text-secondary uppercase tracking-wider">Nivel</span>
+<p class="font-headline-lg-mobile text-headline-lg-mobile font-extrabold text-primary">12</p>
+</div>
+<div class="bg-white border border-[#eeeeee] p-md rounded-xl text-center space-y-xs hover:border-primary/30 transition-colors">
+<span class="font-label-md text-label-md text-secondary uppercase tracking-wider">Puntos</span>
+<p class="font-headline-lg-mobile text-headline-lg-mobile font-extrabold text-primary">4,850</p>
+</div>
+<div class="bg-white border border-[#eeeeee] p-md rounded-xl text-center space-y-xs hover:border-primary/30 transition-colors">
+<span class="font-label-md text-label-md text-secondary uppercase tracking-wider">Check-ins</span>
+<p class="font-headline-lg-mobile text-headline-lg-mobile font-extrabold text-primary">128</p>
+</div>
+</section>
+<!-- Insignias Grid -->
+<section class="space-y-md">
+<div class="flex justify-between items-center">
+<h3 class="font-title-lg text-title-lg text-on-surface">Insignias</h3>
+<button class="text-primary font-label-md text-label-md">Ver todas</button>
+</div>
+<div class="grid grid-cols-4 md:grid-cols-6 gap-md">
+<!-- Unlocked -->
+<div class="flex flex-col items-center gap-xs">
+<div class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-primary-container/10 flex items-center justify-center border-2 border-primary-container">
+<span class="material-symbols-outlined text-primary-container text-3xl" style="font-variation-settings: 'FILL' 1;">restaurant</span>
+</div>
+<span class="text-[10px] text-center font-label-md text-on-surface leading-tight">Cebiche Master</span>
+</div>
+<div class="flex flex-col items-center gap-xs">
+<div class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-tertiary-fixed-dim/10 flex items-center justify-center border-2 border-tertiary-fixed-dim">
+<span class="material-symbols-outlined text-tertiary-container text-3xl" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+</div>
+<span class="text-[10px] text-center font-label-md text-on-surface leading-tight">Anticuchero</span>
+</div>
+<div class="flex flex-col items-center gap-xs">
+<div class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-secondary-fixed/20 flex items-center justify-center border-2 border-secondary">
+<span class="material-symbols-outlined text-secondary text-3xl" style="font-variation-settings: 'FILL' 1;">nightlife</span>
+</div>
+<span class="text-[10px] text-center font-label-md text-on-surface leading-tight">Noctámbulo</span>
+</div>
+<!-- Locked -->
+<div class="flex flex-col items-center gap-xs opacity-40 grayscale">
+<div class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-surface-container flex items-center justify-center border-2 border-outline-variant">
+<span class="material-symbols-outlined text-outline text-3xl">map</span>
+</div>
+<span class="text-[10px] text-center font-label-md text-on-surface leading-tight">Viajero</span>
+</div>
+<div class="hidden md:flex flex-col items-center gap-xs opacity-40 grayscale">
+<div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center border-2 border-outline-variant">
+<span class="material-symbols-outlined text-outline text-3xl">wine_bar</span>
+</div>
+<span class="text-[10px] text-center font-label-md text-on-surface leading-tight">Sommelier</span>
+</div>
+<div class="hidden md:flex flex-col items-center gap-xs opacity-40 grayscale">
+<div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center border-2 border-outline-variant">
+<span class="material-symbols-outlined text-outline text-3xl">bakery_dining</span>
+</div>
+<span class="text-[10px] text-center font-label-md text-on-surface leading-tight">Panadero</span>
+</div>
+</div>
+</section>
+<!-- Personal Map Pin Grid -->
+<section class="space-y-md">
+<div class="flex justify-between items-center">
+<h3 class="font-title-lg text-title-lg text-on-surface">Mi Mapa de Wuarikes</h3>
+<span class="font-label-md text-label-md text-outline">45 Lugares visitados</span>
+</div>
+<div class="relative w-full h-48 md:h-64 rounded-xl overflow-hidden border border-[#eeeeee]">
+<img class="w-full h-full object-cover" data-alt="A stylized, modern map of Lima, Peru, featuring a minimalist light-mode aesthetic with soft gray roads and subtle park textures. Numerous high-contrast purple map pins with small circular restaurant icons are scattered across various vibrant neighborhoods like Miraflores and Barranco. The lighting is clean and professional, creating an inviting visual of urban discovery." data-location="Lima, Peru" src="https://lh3.googleusercontent.com/aida-public/AB6AXuALTITfrSG93sxyFNQgJjlWLQX12yWZr9ZDWYb11OEQPefzduSr-R2oJ1jCybxp8KHSeQAMgUInOZctmeNuI7_K8ozhmirIQbMvYJ0O2WZXa8Dj4a-cnAIJtBaHD2tQi39jSXEnjc5O7DLof0jMgDQ7MJ3KyjOcpnD7GpnzSE61VuVCoXCl9kGHijkpxwhlKwxmnDKHoUYp5BBxWFl98b5N2zsmGgyvA2U_BvVAkEQpvWH7bRfb6nfvJoHAfi_PAwZLmbWw3XUx7iEE"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
+<button class="absolute bottom-3 right-3 bg-white p-2 rounded-full shadow-lg text-primary flex items-center gap-xs">
+<span class="material-symbols-outlined text-md">fullscreen</span>
+<span class="text-xs font-bold px-1">Expandir</span>
+</button>
+</div>
+</section>
+<!-- Recent Check-ins List -->
+<section class="space-y-md">
+<h3 class="font-title-lg text-title-lg text-on-surface">Check-ins Recientes</h3>
+<div class="space-y-md">
+<!-- Check-in Item 1 -->
+<div class="flex gap-md bg-white p-md rounded-xl border border-[#eeeeee] items-start hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="w-16 h-16 rounded-lg overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="A high-quality food photography shot of a classic Peruvian Ceviche dish, featuring fresh white fish, red onions, and sweet potato. The lighting is bright and appetizing, following a clean light-mode aesthetic. The composition is tight and modern, showcasing the textures of the ingredients in a vibrant Barranco restaurant setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBjzfqGroGmDTUuVuZpQLjXY9tm7r6d2OqNCFhDzmWfcx-vBd6A2v8C-a5OFx3xnRgjb6KlP9V6RvMsof_WQECo-IueR5g3npf8CfFILM8O8IHfJrmS1RicijponJGPTeLt1qr1NME9N741H3ODG0uNoTHJ5RDu38BRBzWi6MdiCxHG-QAjR8g6zAVpQGX7ZA1ddH4pLgC5mKoO93ZLWJ1kEMWCUQWWqAf3UxaFAIXkklSswdEMjWuWITTiaQ0aemfrYliRsbPw0MQK"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start">
+<h4 class="font-body-lg text-body-lg font-bold text-on-surface truncate">Canta Rana</h4>
+<span class="text-amber-500 font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+                                4.8
+                            </span>
+</div>
+<p class="font-label-md text-label-md text-outline">Hace 2 horas • Barranco</p>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1 line-clamp-1 italic">"El mejor ceviche de conchas negras que he probado en años."</p>
+</div>
+</div>
+<!-- Check-in Item 2 -->
+<div class="flex gap-md bg-white p-md rounded-xl border border-[#eeeeee] items-start hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="w-16 h-16 rounded-lg overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="A mouth-watering image of Peruvian Anticuchos being grilled over charcoal, with glowing embers and a wisp of smoke. The lighting is dramatic yet clear, highlighting the char and spices on the meat. The overall style is high-contrast and energetic, capturing the soulful street food culture of Lima in a premium digital presentation." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAeHSnIsaoGjvzTeNMQDi2cSTfY-SqLLeSMC5Oj-NEMwmjaz76hZWsZTQf7JMFd2-86Nv7cquo_3uyCRbPbtqnfnEOcV_YtLEiHX2YaTqFHp6U5J4hpBIWxqZbGruAO7fA8pO60Lsc6vY78KqRnCVGfWeX6BXu_TFx4I5DHjBF98v1Yn-AlV5e5ULOGcEhvS-sDj-rMS6XB4c6AE9QT0KgUwmZOwDcnsT4gdyrhXHPUcAdnpQRD4-AdnF8kDHqCcZ3ZuQQozq3O8sce"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start">
+<h4 class="font-body-lg text-body-lg font-bold text-on-surface truncate">Grimanesa Vargas</h4>
+<span class="text-amber-500 font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+                                4.9
+                            </span>
+</div>
+<p class="font-label-md text-label-md text-outline">Ayer • Miraflores</p>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1 line-clamp-1 italic">"Vale cada minuto de la espera. La sazón es inigualable."</p>
+</div>
+</div>
+<!-- Check-in Item 3 -->
+<div class="flex gap-md bg-white p-md rounded-xl border border-[#eeeeee] items-start hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="w-16 h-16 rounded-lg overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="A sophisticated shot of a colorful Pisco Sour cocktail topped with a delicate foam and three drops of bitters. The setting is a chic, modern bar with warm ambient lighting. The aesthetic is clean and high-end, utilizing the brand's flat-plus approach to highlight the vibrant colors of the drink against a minimalist background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGTAC_SYjol8LpKBMTPsiL5GU3GhsSoz4eJ2tD9uXsgDZ2O7oOLqIzpEhNKf236FDE1jidUrKLuHlB3eQ-ZnaCmddTznRuNNdyNtI2MudPaQLxobED_4kToDjc-41U8V4OhQ4VOIcC47ZBGfQZ2wUD1f2UbZbUfq1OqmH7J0YynMYx7T-5J_N-kpxOZ81-WBzBfUWSefEWBtIzyHJZ7JX2LSl_bdcOOD6jGIY3OhD7iRObc74wdA71Uo146IN8EJxS2o-LXcU-c9gn"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start">
+<h4 class="font-body-lg text-body-lg font-bold text-on-surface truncate">Ayahuasca Restobar</h4>
+<span class="text-amber-500 font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+                                4.5
+                            </span>
+</div>
+<p class="font-label-md text-label-md text-outline">Hace 2 días • Barranco</p>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1 line-clamp-1 italic">"La casona es increíble, gran ambiente para unos tragos."</p>
+</div>
+</div>
+</div>
+<button class="w-full py-md border-2 border-primary/20 text-primary rounded-xl font-bold hover:bg-primary-container/5 transition-colors">Ver historial completo</button>
+</section>
+</main>
+<!-- Bottom Navigation Shell -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center h-20 px-4 pb-safe bg-surface-container-lowest border-t border-outline-variant">
+<button class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim px-4 py-1 hover:bg-surface-variant dark:hover:bg-on-surface-variant scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-label-md text-label-md">Explorar</span>
+</button>
+<button class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim px-4 py-1 hover:bg-surface-variant dark:hover:bg-on-surface-variant scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined">rss_feed</span>
+<span class="font-label-md text-label-md">Feed</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-xl px-4 py-1 scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-label-md text-label-md">Perfil</span>
+</button>
+</nav>
+<script>
+        // Micro-interactions for buttons and cards
+        document.querySelectorAll('button, .cursor-pointer').forEach(el => {
+            el.addEventListener('mousedown', () => el.classList.add('scale-95'));
+            el.addEventListener('mouseup', () => el.classList.remove('scale-95'));
+            el.addEventListener('mouseleave', () => el.classList.remove('scale-95'));
+        });
+
+        // Atmospheric parallax-like effect on the profile avatar
+        window.addEventListener('mousemove', (e) => {
+            const avatar = document.querySelector('.relative > div');
+            if (!avatar) return;
+            const { clientX, clientY } = e;
+            const { innerWidth, innerHeight } = window;
+            const xPos = (clientX / innerWidth - 0.5) * 10;
+            const yPos = (clientY / innerHeight - 0.5) * 10;
+            avatar.style.transform = `translate(${xPos}px, ${yPos}px)`;
+        });
+    </script>
+</body></html>

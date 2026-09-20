@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Wuarikes - Feed Social</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#e2e2e2",
+                    "primary-fixed-dim": "#d3bbff",
+                    "on-tertiary": "#ffffff",
+                    "tertiary": "#523c00",
+                    "surface-dim": "#dadada",
+                    "on-tertiary-fixed-variant": "#5b4300",
+                    "on-secondary-fixed-variant": "#484551",
+                    "surface-container-highest": "#e2e2e2",
+                    "surface-container": "#eeeeee",
+                    "on-background": "#1a1c1c",
+                    "tertiary-container": "#6e5200",
+                    "on-tertiary-fixed": "#261a00",
+                    "on-surface": "#1a1c1c",
+                    "inverse-primary": "#d3bbff",
+                    "outline": "#7b7484",
+                    "on-primary-fixed": "#250059",
+                    "outline-variant": "#ccc3d5",
+                    "secondary": "#605d69",
+                    "secondary-fixed-dim": "#c9c4d3",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed": "#ffdf9e",
+                    "on-primary-container": "#d8c2ff",
+                    "surface-container-high": "#e8e8e8",
+                    "on-secondary-fixed": "#1c1a25",
+                    "on-secondary-container": "#66636f",
+                    "primary": "#4f1c9e",
+                    "on-error-container": "#93000a",
+                    "surface-container-low": "#f3f3f3",
+                    "secondary-container": "#e6e0ef",
+                    "surface-bright": "#f9f9f9",
+                    "surface-container-lowest": "#ffffff",
+                    "on-error": "#ffffff",
+                    "on-surface-variant": "#4a4453",
+                    "inverse-surface": "#2f3131",
+                    "on-tertiary-container": "#ffc320",
+                    "background": "#f9f9f9",
+                    "primary-container": "#673ab7",
+                    "primary-fixed": "#ebddff",
+                    "on-primary": "#ffffff",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed-dim": "#fabd00",
+                    "inverse-on-surface": "#f0f1f1",
+                    "surface": "#f9f9f9",
+                    "secondary-fixed": "#e6e0ef",
+                    "on-primary-fixed-variant": "#5727a6",
+                    "on-secondary": "#ffffff",
+                    "surface-tint": "#6f43c0"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "base": "4px",
+                    "container-margin": "20px",
+                    "xs": "4px",
+                    "sm": "8px",
+                    "md": "16px",
+                    "lg": "24px",
+                    "xl": "32px",
+                    "gutter": "16px"
+            },
+            "fontFamily": {
+                    "body-md": ["Be Vietnam Pro"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "body-lg": ["Be Vietnam Pro"],
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "label-md": ["Be Vietnam Pro"],
+                    "title-lg": ["Be Vietnam Pro"]
+            },
+            "fontSize": {
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-1px", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.5px", "fontWeight": "500"}],
+                    "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .pull-to-refresh-indicator {
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .feed-container {
+            scroll-behavior: smooth;
+        }
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface-dim border-b border-outline-variant dark:border-outline fixed top-0 w-full z-50 transition-colors duration-200 ease-in-out">
+<div class="flex justify-between items-center px-container-margin py-md w-full max-w-[1200px] mx-auto">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary-container overflow-hidden ring-2 ring-primary/10">
+<img class="w-full h-full object-cover" data-alt="A stylish, high-quality portrait of a young Peruvian food enthusiast with a bright smile, wearing casual urban fashion. The lighting is soft and natural, reflecting a modern light-mode aesthetic. The background is a blurred trendy Lima cafe with warm wood textures and vibrant green plants, consistent with a clean and upscale corporate UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIA42z7UXlLgFqzSXA26IbXjjx0wewY2AcT7TerkrSmLiUxZDZo_w8bITqVfzoxXhdbbpJPH0hGyZyiCuo61bSzxrsdIwF2nwkLecV5dzdgAXgeU9yoIAOxXyXKCiHRnDjOZbqefBm-AgmAJ8Kz5v2yhz6hBqBgO2OaLAdPn6noXGkYOednboqw8KXf99tySzSEZHAf_sQoN2WdCNl_PsHjlZiCAlEAjBO1YG3CLeO5SsFKtpaDkzYVwC-_kOVkMv66t-vNOWfxa5s"/>
+</div>
+<h1 class="font-display-lg text-headline-lg-mobile md:text-display-lg font-bold text-primary dark:text-primary-fixed-dim tracking-tight">Wuarikes</h1>
+</div>
+<div class="flex items-center gap-sm">
+<button class="p-2 rounded-full hover:bg-secondary-container dark:hover:bg-secondary transition-colors duration-200">
+<span class="material-symbols-outlined text-primary">search</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 mt-[72px] mb-20 px-container-margin md:px-0">
+<div class="max-w-[600px] mx-auto pt-4 feed-container">
+<!-- Pull to Refresh Indicator -->
+<div class="flex justify-center items-center py-4 opacity-0 -mt-12 transition-all duration-300" id="refresh-ui">
+<div class="bg-surface-container-highest p-2 rounded-full shadow-sm animate-bounce">
+<span class="material-symbols-outlined text-primary font-bold">refresh</span>
+</div>
+</div>
+<!-- Feed List -->
+<div class="flex flex-col gap-lg">
+<!-- Feed Card 1 -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md">
+<!-- Card Header -->
+<div class="p-md flex items-start justify-between">
+<div class="flex gap-md">
+<img class="w-12 h-12 rounded-full object-cover border border-outline-variant" data-alt="Close-up profile avatar of a young woman with curly hair, smiling warmly. Professional studio lighting with a clean, high-contrast light-mode look. The background is a soft solid pastel lavender, matching the primary-container color palette of the app's sophisticated design system." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC6pVKt-GdO4Q0vu0LjWwy4UEbEFdqbQ_Kj0WY_5y53L8FRwnmB3_QWZCTAYQi6dog1LSEPFh8sx0gZTJ5v7OmnEOrcfMhMPXCZ5ea5C-TFEtFKMuQiXJx4myLK5fzML-HSxYbjCQgUD7dhI631ZAlHrsj8oMhYBHwCGOBARvkKwmkaJNizQolIu2HaxghZGVbwZJ9BqN5Bce7WxknwY3pxywbhh0voPpmdTc3-ld2WMTj9F2zHZR4mZ9rWCOI3uYlrvtKW1Q4BbwId"/>
+<div>
+<h3 class="font-title-lg text-body-lg font-bold text-on-surface">Camila Torres</h3>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary text-[16px]">location_on</span>
+<button class="text-primary font-bold text-body-md hover:underline">La Picantería</button>
+</div>
+</div>
+</div>
+<div class="flex items-center bg-tertiary-fixed px-2 py-1 rounded-lg">
+<span class="material-symbols-outlined text-on-tertiary-fixed text-[18px] mr-1" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-on-tertiary-fixed font-bold text-label-md">4.8</span>
+</div>
+</div>
+<!-- Food Photo -->
+<div class="aspect-[4/3] w-full overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A vibrant, high-angle shot of a traditional Peruvian Ceviche served in a modern white ceramic bowl. The dish features fresh white fish, bright orange sweet potato, and crisp red onions garnished with cilantro. Sunlight streams across the table, creating clean, sharp shadows and highlighting the fresh textures. The aesthetic is appetizing and high-end, fitting a premium culinary social app." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCO3yPK6UmvsEXRZGn5QQpgyq4x8Xj-RTUHS3PPjQd--Z0rJ-WaetES14JcqhBBEo-BkINZS2W5_rslHy7XHyY8_2muJtkZ5oikSysOyA-eFKEij-scDFmnq5MXoDS0PIAM54NvQKJdRWCvKVUEiH8tfWHPE7g8YpQuB_usyGidZPAgBS1LTNkGXJb7pUL-I8ulAKp1QjDfHeSCYiQYmdFhEFNpQmsxLgit0ozpzJRy6MozaAuz-xovESFQOz02m0SezzCrLC-0Pbd0"/>
+</div>
+<!-- Card Body -->
+<div class="p-md">
+<p class="text-on-surface-variant text-body-md mb-md">
+                            El ceviche de mercado aquí es simplemente de otro nivel. El picante está en su punto exacto y la frescura es insuperable. ¡Un must de Surquillo! 🇵🇪🔥
+                        </p>
+<div class="flex items-center justify-between border-t border-outline-variant pt-md">
+<div class="flex items-center gap-lg">
+<button class="flex items-center gap-xs text-secondary hover:text-primary transition-colors group">
+<span class="material-symbols-outlined group-active:scale-125 transition-transform" style="font-variation-settings: 'FILL' 1;">favorite</span>
+<span class="font-label-md">241</span>
+</button>
+<button class="flex items-center gap-xs text-secondary hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-label-md">18</span>
+</button>
+</div>
+<button class="p-2 rounded-full hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-secondary">share</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Feed Card 2 -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md">
+<div class="p-md flex items-start justify-between">
+<div class="flex gap-md">
+<img class="w-12 h-12 rounded-full object-cover border border-outline-variant" data-alt="Portrait of a male chef in a clean white uniform, looking at the camera with a friendly expression. Bright, airy restaurant background with soft focus on copper pots. High-contrast, vibrant colors with a clean corporate feel. Part of a premium food exploration social network interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYo4sngA5MW24URTr72Y6HJba-gZ4_mL-FHIlsdOrsxwZReFnEllgOxXuLZyM6l7w92JcaMsezxwwX-NtF-ovp1zz3qDakXyDQcJIo30_26akMOCVU2fzKCcErZALTtd45W9ZdPH4BoeCwLFyUIpZdDqSWvE7xKFXS_aEsjPWX1U3fAvDaVvYu4wpZy9ZvMzj7z4uCVfejs5e2vvty23JhpuYfQlwrHSP5xvZK0pl3Kup10zff9yj0E0FCFjsgFs2cF-vvUGjk6QNj"/>
+<div>
+<h3 class="font-title-lg text-body-lg font-bold text-on-surface">Rodrigo Paz</h3>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary text-[16px]">location_on</span>
+<button class="text-primary font-bold text-body-md hover:underline">Isolina Taberna</button>
+</div>
+</div>
+</div>
+<div class="flex items-center bg-tertiary-fixed px-2 py-1 rounded-lg">
+<span class="material-symbols-outlined text-on-tertiary-fixed text-[18px] mr-1" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-on-tertiary-fixed font-bold text-label-md">5.0</span>
+</div>
+</div>
+<div class="aspect-[4/3] w-full overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A masterfully plated Lomo Saltado in a rustic cast iron skillet. Succulent beef strips, vibrant red onions, and tomatoes are glistening under warm, focused light. Golden-brown potato fries are neatly stacked on the side. The scene is rich in texture and color, emphasizing the quality of Peruvian urban gastronomy in a high-contrast digital gallery style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAMFY89PNZ1JxNNcPuOm-8AO0jnY8eQ2SDZhvF8w5zW-VIEAQQNH8Fm0dGUIwFNt4DSchrJV54aE5ktiJFu4yDFkRnRfsI-MkHaQXNw-yZmn_S1xoQAbH2vDW8F05slGOizcM271S-frSO7jqIZQdDpdEwb6_XJanAXuHESFvYZwWljUS6CpN3LAmXaJ8GAGZHALKGJ7quOvxNesU-xedjr11V4VB3tnFLE9j9YFQsavQHqAS-wavwnn93XPsIrIK431uONF8i7lP33"/>
+</div>
+<div class="p-md">
+<p class="text-on-surface-variant text-body-md mb-md">
+                            Nada como un clásico bien ejecutado. El sabor ahumado del lomo es espectacular. La porción es generosa, ideal para compartir.
+                        </p>
+<div class="flex items-center justify-between border-t border-outline-variant pt-md">
+<div class="flex items-center gap-lg">
+<button class="flex items-center gap-xs text-primary transition-colors group">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">favorite</span>
+<span class="font-label-md">1.2k</span>
+</button>
+<button class="flex items-center gap-xs text-secondary hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-label-md">45</span>
+</button>
+</div>
+<button class="p-2 rounded-full hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-secondary">share</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Feed Card 3 (No Photo Variation) -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md">
+<div class="p-md flex items-start justify-between">
+<div class="flex gap-md">
+<img class="w-12 h-12 rounded-full object-cover border border-outline-variant" data-alt="Close up of a young man with glasses and a friendly smile, photographed in a modern urban setting. Sharp focus, clean light-mode aesthetic, vibrant primary purple accents in the background. High-quality corporate photography for a social media app profile." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCt0rWtmbpuuqrSF8LoVc9nnSurRMxZTZnLn_ZV3F1GS1B2jNs2G8jcxML24PGZci5cyV78iG49B7L6C8lLRG86_BxOfqQPEv3xer83LUYwF5N4TuRrxZ-sTcwZ99edLg6sxbGDrtiu7iUPjGm6KNDg1SPX6uQASRcIOQc6ZBVdqbSf9uEa34kKlefp-2iIxr0aFUys0jhuaoZCEMQOaM6c8M-gaPTAeAjLqPrqQjkAh1Ko0-nJVPqNeBAdoksILs6U7X3_ygP02ZH3"/>
+<div>
+<h3 class="font-title-lg text-body-lg font-bold text-on-surface">Mateo Ruiz</h3>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary text-[16px]">location_on</span>
+<button class="text-primary font-bold text-body-md hover:underline">Mérito</button>
+</div>
+</div>
+</div>
+<div class="flex items-center bg-tertiary-fixed px-2 py-1 rounded-lg">
+<span class="material-symbols-outlined text-on-tertiary-fixed text-[18px] mr-1" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-on-tertiary-fixed font-bold text-label-md">4.5</span>
+</div>
+</div>
+<div class="p-md">
+<p class="text-on-surface-variant text-body-lg italic font-medium leading-relaxed">
+                            "La mezcla de ingredientes amazónicos con técnicas modernas es alucinante. Cada plato cuenta una historia diferente."
+                        </p>
+<div class="flex items-center justify-between border-t border-outline-variant mt-md pt-md">
+<div class="flex items-center gap-lg">
+<button class="flex items-center gap-xs text-secondary hover:text-primary transition-colors">
+<span class="material-symbols-outlined">favorite</span>
+<span class="font-label-md">89</span>
+</button>
+<button class="flex items-center gap-xs text-secondary hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-label-md">4</span>
+</button>
+</div>
+<button class="p-2 rounded-full hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-secondary">share</span>
+</button>
+</div>
+</div>
+</article>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center h-20 px-4 pb-safe bg-surface-container-lowest border-t border-outline-variant shadow-lg transition-transform md:hidden">
+<!-- Explorar -->
+<a class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim px-4 py-1 hover:bg-surface-variant dark:hover:bg-on-surface-variant transition-transform scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined mb-1">explore</span>
+<span class="font-label-md text-label-md">Explorar</span>
+</a>
+<!-- Feed (Active) -->
+<a class="flex flex-col items-center justify-center bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-xl px-6 py-1 transition-transform scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">rss_feed</span>
+<span class="font-label-md text-label-md">Feed</span>
+</a>
+<!-- Perfil -->
+<a class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim px-4 py-1 hover:bg-surface-variant dark:hover:bg-on-surface-variant transition-transform scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined mb-1">person</span>
+<span class="font-label-md text-label-md">Perfil</span>
+</a>
+</nav>
+<!-- Desktop Sidebar/Nav (Bonus for responsiveness) -->
+<div class="hidden md:flex fixed right-0 top-[72px] h-full w-[300px] border-l border-outline-variant p-lg bg-surface-container-low">
+<div class="w-full">
+<h4 class="font-title-lg text-on-surface mb-md">Trending en Lima</h4>
+<ul class="space-y-md">
+<li class="bg-surface-container-lowest p-sm rounded-lg border border-outline-variant">
+<p class="font-label-md text-primary">#CevicheDay</p>
+<p class="text-body-md text-on-surface-variant">4.2k publicaciones</p>
+</li>
+<li class="bg-surface-container-lowest p-sm rounded-lg border border-outline-variant">
+<p class="font-label-md text-primary">#StreetFoodSurquillo</p>
+<p class="text-body-md text-on-surface-variant">1.5k publicaciones</p>
+</li>
+</ul>
+</div>
+</div>
+<script>
+        // Micro-interaction: Pull to refresh simulation
+        let touchstartY = 0;
+        let touchendY = 0;
+        const refreshIndicator = document.getElementById('refresh-ui');
+
+        document.addEventListener('touchstart', e => {
+            touchstartY = e.changedTouches[0].screenY;
+        }, {passive: true});
+
+        document.addEventListener('touchmove', e => {
+            const currentY = e.changedTouches[0].screenY;
+            const diff = currentY - touchstartY;
+            if (window.scrollY === 0 && diff > 50) {
+                refreshIndicator.style.opacity = '1';
+                refreshIndicator.style.marginTop = '0';
+                refreshIndicator.style.transform = `translateY(${Math.min(diff / 3, 40)}px) rotate(${diff}deg)`;
+            }
+        }, {passive: true});
+
+        document.addEventListener('touchend', e => {
+            touchendY = e.changedTouches[0].screenY;
+            if (window.scrollY === 0 && (touchendY - touchstartY) > 100) {
+                // Simulate refresh
+                setTimeout(() => {
+                    refreshIndicator.style.opacity = '0';
+                    refreshIndicator.style.marginTop = '-3rem';
+                }, 1500);
+            } else {
+                refreshIndicator.style.opacity = '0';
+                refreshIndicator.style.marginTop = '-3rem';
+            }
+        }, {passive: true});
+
+        // Like button interaction
+        document.querySelectorAll('button group').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const icon = this.querySelector('.material-symbols-outlined');
+                const fill = icon.style.fontVariationSettings.includes("'FILL' 1");
+                icon.style.fontVariationSettings = fill ? "'FILL' 0" : "'FILL' 1";
+                this.classList.toggle('text-primary');
+                this.classList.toggle('text-secondary');
+            });
+        });
+    </script>
+</body></html>
