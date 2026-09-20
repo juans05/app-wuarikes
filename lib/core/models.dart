@@ -258,6 +258,8 @@ class MyLoyaltyCard {
   final int? stampsRemaining;
   final String? level;
   final String? rewardTitle;
+  final double? latitude;
+  final double? longitude;
 
   MyLoyaltyCard({
     required this.placeId,
@@ -270,11 +272,16 @@ class MyLoyaltyCard {
     this.stampsRemaining,
     this.level,
     this.rewardTitle,
+    this.latitude,
+    this.longitude,
   });
 
   /// True once the reward is earned and ready to redeem. Only computed for
   /// stamp-based programs — points programs have no redemption threshold yet.
   bool get rewardReady => stampsRemaining == 0;
+
+  /// True when there's enough location data to register a geofence for this card.
+  bool get hasLocation => latitude != null && longitude != null;
 
   factory MyLoyaltyCard.fromJson(Map<String, dynamic> json) => MyLoyaltyCard(
         placeId: json['placeId'] as String,
@@ -287,7 +294,24 @@ class MyLoyaltyCard {
         stampsRemaining: (json['stampsRemaining'] as num?)?.toInt(),
         level: json['level'] as String?,
         rewardTitle: json['rewardTitle'] as String?,
+        latitude: (json['latitude'] as num?)?.toDouble(),
+        longitude: (json['longitude'] as num?)?.toDouble(),
       );
+
+  Map<String, dynamic> toJson() => {
+        'placeId': placeId,
+        'placeName': placeName,
+        'placeCoverImageUrl': placeCoverImageUrl,
+        'programType': programType,
+        'stamps': stamps,
+        'points': points,
+        'stampsToReward': stampsToReward,
+        'stampsRemaining': stampsRemaining,
+        'level': level,
+        'rewardTitle': rewardTitle,
+        'latitude': latitude,
+        'longitude': longitude,
+      };
 }
 
 class Paginated<T> {
