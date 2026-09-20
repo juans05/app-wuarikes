@@ -28,6 +28,12 @@
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Wuarikes usa tu ubicación para mostrarte huariques cercanos y ubicar el lugar que estás registrando.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Si activás los avisos de cercanía, Wuarikes usa tu ubicación en segundo plano para avisarte cuando estés cerca de un huarique donde ya tenés sellos o premios.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Wuarikes usa la cámara para tomar fotos del huarique que estás registrando.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
