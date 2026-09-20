@@ -50,3 +50,4 @@ app.*.map.json
 # Agent/tool session state and caches - not project source
 /.omc/
 /.playwright-mcp/
+/.superpowers/
