@@ -294,8 +294,8 @@ class MyLoyaltyCard {
         stampsRemaining: (json['stampsRemaining'] as num?)?.toInt(),
         level: json['level'] as String?,
         rewardTitle: json['rewardTitle'] as String?,
-        latitude: (json['latitude'] as num?)?.toDouble(),
-        longitude: (json['longitude'] as num?)?.toDouble(),
+        latitude: _parseNum(json['latitude'])?.toDouble(),
+        longitude: _parseNum(json['longitude'])?.toDouble(),
       );
 
   Map<String, dynamic> toJson() => {
