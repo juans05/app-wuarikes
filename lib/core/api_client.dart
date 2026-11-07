@@ -35,20 +35,25 @@ class ApiClient {
       _request('POST', path, body: body);
   Future<dynamic> patch(String path, Map<String, dynamic> body) =>
       _request('PATCH', path, body: body);
+  Future<dynamic> put(String path, [Map<String, dynamic>? body]) =>
+      _request('PUT', path, body: body);
   Future<dynamic> delete(String path) => _request('DELETE', path);
 
+  /// [fields] son campos de texto extra del multipart (por defecto ninguno).
   Future<Map<String, dynamic>> uploadMedia(String path, String field,
       List<int> bytes, String filename, String mimeType,
-      {bool retry = true}) async {
+      {bool retry = true, Map<String, String>? fields}) async {
     final request =
         http.MultipartRequest('POST', Uri.parse('${ApiConfig.baseUrl}$path'));
     final token = await accessToken;
     if (token != null) request.headers['Authorization'] = 'Bearer $token';
+    if (fields != null) request.fields.addAll(fields);
     request.files.add(http.MultipartFile.fromBytes(field, bytes,
         filename: filename, contentType: MediaType.parse(mimeType)));
     final response = await http.Response.fromStream(await request.send());
     if (response.statusCode == 401 && retry && await _tryRefresh()) {
-      return uploadMedia(path, field, bytes, filename, mimeType, retry: false);
+      return uploadMedia(path, field, bytes, filename, mimeType,
+          retry: false, fields: fields);
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(response.statusCode,
@@ -119,6 +124,14 @@ class ApiClient {
                 headers: headers,
                 body: body != null ? jsonEncode(body) : null) ??
             http.post(uri,
+                headers: headers,
+                body: body != null ? jsonEncode(body) : null));
+        break;
+      case 'PUT':
+        res = await (client?.put(uri,
+                headers: headers,
+                body: body != null ? jsonEncode(body) : null) ??
+            http.put(uri,
                 headers: headers,
                 body: body != null ? jsonEncode(body) : null));
         break;
