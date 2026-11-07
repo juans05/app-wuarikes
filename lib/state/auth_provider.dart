@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api_client.dart';
+import '../core/geofence_sync_service.dart';
 import '../core/models.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -111,6 +113,9 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     await api.logout();
     await api.clearTokens();
+    // Geofences belong to this user's loyalty cards; don't keep them around.
+    await GeofenceSyncService().stop();
+    (await SharedPreferences.getInstance()).setBool(geofencingPrefKey, false);
     user = null;
     notifyListeners();
   }

@@ -28,10 +28,17 @@ class _AsyncSectionState extends State<AsyncSection> {
                 if (snapshot.connectionState != ConnectionState.done)
                   return const LinearProgressIndicator();
                 if (snapshot.hasError)
-                  return TextButton.icon(
-                      onPressed: () => setState(() => _future = widget.load()),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('No se pudo cargar. Reintentar'));
+                  return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${snapshot.error}',
+                            style: Theme.of(context).textTheme.bodyMedium),
+                        TextButton.icon(
+                            onPressed: () =>
+                                setState(() => _future = widget.load()),
+                            icon: const Icon(Icons.refresh, size: 16),
+                            label: const Text('Reintentar')),
+                      ]);
                 return widget.builder(snapshot.data);
               }),
         ]),

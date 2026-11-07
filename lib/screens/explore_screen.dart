@@ -1,13 +1,15 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
 import '../core/api_client.dart';
 import '../core/app_theme.dart';
 import '../core/map_config.dart';
 import '../core/marker_builder.dart';
 import '../core/models.dart';
+import '../core/place_image.dart';
+import '../state/auth_provider.dart';
 import 'advanced_filters_screen.dart';
 import 'filter_screen.dart';
 import 'place_detail_screen.dart';
@@ -17,6 +19,11 @@ import 'discovery_screen.dart';
 /// Default map center: Miraflores, Lima — used until the user's location
 /// resolves (or if location permission is denied).
 const _defaultCenter = LatLng(-12.1211, -77.0296);
+
+/// Why we couldn't place the user on the map. Each case needs a different
+/// fix, so the banner can send them to the right place instead of a generic
+/// "enable location" message.
+enum _LocationIssue { serviceOff, denied, blocked, unavailable }
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -35,6 +42,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
   String? _activeCategory;
   List<Marker> _markers = [];
   Position? _position;
+  _LocationIssue? _locationIssue;
+  bool _mapReady = false;
   double _radiusKm = 5;
   bool _openNow = false;
   double? _minRating;
@@ -55,9 +64,27 @@ class _ExploreScreenState extends State<ExploreScreen> {
         .name;
   }
 
+  GamificationStats? _stats;
+
+  void _loadStats() {
+    if (!context.read<AuthProvider>().isLoggedIn) return;
+    _api
+        .getMyStats()
+        .then((s) => mounted ? setState(() => _stats = s) : null)
+        .catchError((_) {});
+  }
+
+  @override
+  void dispose() {
+    ApiClient.checkinCreated.removeListener(_loadStats);
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
+    _loadStats();
+    ApiClient.checkinCreated.addListener(_loadStats);
     _api
         .getCategories()
         .then((c) => mounted ? setState(() => _categories = c) : null)
@@ -71,13 +98,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
     // filter) once real location resolves in the background.
     _loadPlaces();
     _resolveLocation().then((_) {
-      if (!mounted) return;
-      if (_position != null) {
+      if (!mounted || _position == null) return;
+      if (_mapReady) {
         _mapController.move(
-            LatLng(_position!.latitude, _position!.longitude),
-            _mapController.camera.zoom);
-        _loadPlaces();
+            LatLng(_position!.latitude, _position!.longitude), 15);
       }
+      _loadPlaces();
     });
   }
 
@@ -105,21 +131,53 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   Future<void> _resolveLocation() async {
     try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        if (mounted) setState(() => _locationIssue = _LocationIssue.serviceOff);
+        return;
+      }
       var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
       if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) return;
-      if (!await Geolocator.isLocationServiceEnabled()) return;
+          permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          setState(() => _locationIssue =
+              permission == LocationPermission.deniedForever
+                  ? _LocationIssue.blocked
+                  : _LocationIssue.denied);
+        }
+        return;
+      }
       _position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.low,
+            accuracy: LocationAccuracy.high,
             timeLimit: Duration(seconds: 20)),
       );
+      if (mounted) setState(() => _locationIssue = null);
     } catch (_) {
       _position = null;
+      if (mounted) {
+        setState(() => _locationIssue = _LocationIssue.unavailable);
+      }
     }
+  }
+
+  /// Sends the user straight to whatever is actually blocking us, then
+  /// re-resolves so the map recenters without needing a manual retry.
+  Future<void> _fixLocation() async {
+    if (_locationIssue == _LocationIssue.serviceOff) {
+      await Geolocator.openLocationSettings();
+    } else if (_locationIssue == _LocationIssue.blocked) {
+      await Geolocator.openAppSettings();
+    }
+    await _resolveLocation();
+    if (!mounted || _position == null) return;
+    if (_mapReady) {
+      _mapController.move(
+          LatLng(_position!.latitude, _position!.longitude), 15);
+    }
+    _loadPlaces();
   }
 
   Future<void> _loadPlaces() async {
@@ -179,14 +237,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     child: SizedBox(
                       width: 72,
                       height: 72,
-                      child: place.coverImageUrl != null
-                          ? CachedNetworkImage(
-                              imageUrl: place.coverImageUrl!,
-                              fit: BoxFit.cover)
-                          : Container(
-                              color: AppColors.primaryContainer,
-                              child: const Icon(Icons.restaurant_rounded,
-                                  color: AppColors.primary, size: 32)),
+                      child: PlaceImage(
+                          imageUrl: place.coverImageUrl, logoPadding: 6),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -257,6 +309,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
             options: MapOptions(
               initialCenter: initialTarget,
               initialZoom: 14,
+              onMapReady: () {
+                _mapReady = true;
+                if (_position != null) {
+                  _mapController.move(
+                      LatLng(_position!.latitude, _position!.longitude), 15);
+                }
+              },
               interactionOptions: const InteractionOptions(
                   flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
             ),
@@ -309,6 +368,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       ),
                     ),
                   ),
+                  if (_stats != null) ...[
+                    const SizedBox(height: 8),
+                    _ProgressPill(stats: _stats!),
+                  ],
                   const SizedBox(height: 10),
                   SizedBox(
                     height: 40,
@@ -347,6 +410,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       ],
                     ),
                   ),
+                  if (_locationIssue != null) ...[
+                    const SizedBox(height: 10),
+                    _LocationBanner(
+                        issue: _locationIssue!, onFix: _fixLocation),
+                  ],
                 ],
               ),
             ),
@@ -372,12 +440,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
               mini: true,
               backgroundColor: Colors.white,
               foregroundColor: AppColors.primary,
-              onPressed: () async {
-                if (_position != null) {
-                  _mapController.move(
-                      LatLng(_position!.latitude, _position!.longitude),
-                      _mapController.camera.zoom);
+              onPressed: () {
+                if (_position == null) {
+                  _fixLocation();
+                  return;
                 }
+                _mapController.move(
+                    LatLng(_position!.latitude, _position!.longitude),
+                    _mapController.camera.zoom);
               },
               child: const Icon(Icons.my_location_rounded),
             ),
@@ -468,6 +538,108 @@ class _ExploreScreenState extends State<ExploreScreen> {
     });
     _loadPlaces();
     _openSearchResults(filters: result);
+  }
+}
+
+/// Persistent (not a snackbar) because without location the whole nearby
+/// search is degraded, and the user needs the fix within reach, not a
+/// message that disappears after four seconds.
+/// Level/XP bar + weekly streak: keeps progress visible on the screen users
+/// open most, so there's always a "next milestone" in sight.
+class _ProgressPill extends StatelessWidget {
+  final GamificationStats stats;
+  const _ProgressPill({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppShadows.card,
+      ),
+      child: Row(children: [
+        Text('Nv ${stats.level}',
+            style: const TextStyle(
+                fontWeight: FontWeight.w700, color: AppColors.primary)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: LinearProgressIndicator(
+            value: stats.nextLevelXp == 0
+                ? 0
+                : (stats.xp / stats.nextLevelXp).clamp(0.0, 1.0),
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(8),
+            color: AppColors.primary,
+            backgroundColor: AppColors.primaryContainer,
+          ),
+        ),
+        if (stats.weeklyStreak > 0) ...[
+          const SizedBox(width: 10),
+          Text('🔥 ${stats.weeklyStreak}',
+              style: const TextStyle(fontWeight: FontWeight.w700)),
+        ],
+      ]),
+    );
+  }
+}
+
+class _LocationBanner extends StatelessWidget {
+  final _LocationIssue issue;
+  final VoidCallback onFix;
+  const _LocationBanner({required this.issue, required this.onFix});
+
+  @override
+  Widget build(BuildContext context) {
+    final (message, action) = switch (issue) {
+      _LocationIssue.serviceOff => (
+          'Tu GPS está apagado. Actívalo para ver los huariques cerca de ti y filtrar por distancia.',
+          'Activar'
+        ),
+      _LocationIssue.blocked => (
+          'Bloqueaste el permiso de ubicación. Sin él no podemos mostrarte lo que tienes cerca.',
+          'Ajustes'
+        ),
+      _LocationIssue.denied => (
+          'Necesitamos tu ubicación para mostrarte huariques cerca de ti. Sin ella la búsqueda no funciona bien.',
+          'Permitir'
+        ),
+      _LocationIssue.unavailable => (
+          'No pudimos obtener tu ubicación. La búsqueda por cercanía no funcionará correctamente.',
+          'Reintentar'
+        ),
+    };
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.35)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.10),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
+        ],
+      ),
+      child: Row(children: [
+        const Icon(Icons.location_off_rounded,
+            size: 18, color: AppColors.primary),
+        const SizedBox(width: 10),
+        Expanded(child: Text(message, style: AppText.labelMd)),
+        const SizedBox(width: 4),
+        FilledButton(
+          onPressed: onFix,
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            textStyle: AppText.labelMd.copyWith(fontWeight: FontWeight.w700),
+          ),
+          child: Text(action),
+        ),
+      ]),
+    );
   }
 }
 

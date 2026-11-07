@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import '../core/api_client.dart';
+import '../core/app_theme.dart';
 import '../core/models.dart';
 import '../core/external_actions.dart';
 import '../state/auth_provider.dart';
@@ -89,7 +90,9 @@ class _PlaceExtrasState extends State<PlaceExtras> {
       final checkin = await _api.createCheckin(
           placeId: _id,
           latitude: position.latitude,
-          longitude: position.longitude);
+          longitude: position.longitude,
+          isMocked: position.isMocked,
+          accuracyMeters: position.accuracy);
       if (!mounted) return;
       setState(() {
         _message = '¡Visita registrada!';
@@ -110,157 +113,258 @@ class _PlaceExtrasState extends State<PlaceExtras> {
     final details = place.details;
     final meta = details['metadata'] as Map? ?? {};
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Wrap(spacing: 8, children: [
-        OutlinedButton.icon(
-            onPressed: _busy ? null : _toggle,
-            icon: Icon(_interested ? Icons.bookmark : Icons.bookmark_outline),
-            label: Text('Quiero ir · $_count')),
-        FilledButton.icon(
-            onPressed: _busy ? null : _quick,
-            icon: const Icon(Icons.my_location),
-            label: const Text('Estoy aquí')),
-        OutlinedButton(
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => MediaScreen(
-                    placeId: _id,
-                    ownerId:
-                        widget.place.details['claimedByUserId'] as String?))),
-            child: const Text('Fotos y videos')),
-        OutlinedButton(
-            onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => FeedScreen(placeId: _id))),
-            child: const Text('Todas las reseñas')),
-        TextButton(
-            onPressed: _busy
-                ? null
-                : () async {
-                    if (!await _login() || !mounted) return;
-                    final sent = await showDialog<bool>(
-                        context: context,
-                        builder: (_) => InfoSuggestionDialog(placeId: _id));
-                    if (sent == true && mounted)
-                      setState(
-                          () => _message = 'Gracias. Recibimos tu sugerencia.');
-                  },
-            child: const Text('Reportar información desactualizada')),
+      Row(children: [
+        Expanded(
+          child: FilledButton.icon(
+              onPressed: _busy ? null : _quick,
+              icon: const Icon(Icons.my_location, size: 18),
+              label: const Text('Estoy aquí')),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: OutlinedButton.icon(
+              onPressed: _busy ? null : _toggle,
+              icon: Icon(
+                  _interested ? Icons.bookmark : Icons.bookmark_outline,
+                  size: 18),
+              label: Text('Quiero ir · $_count')),
+        ),
       ]),
-      if (_busy) const LinearProgressIndicator(),
-      if (_message != null) Text(_message!),
+      const SizedBox(height: 8),
+      Row(children: [
+        Expanded(
+          child: OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => MediaScreen(
+                      placeId: _id,
+                      ownerId:
+                          widget.place.details['claimedByUserId'] as String?))),
+              icon: const Icon(Icons.photo_library_outlined, size: 18),
+              label: const Text('Fotos')),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => FeedScreen(placeId: _id))),
+              icon: const Icon(Icons.reviews_outlined, size: 18),
+              label: const Text('Reseñas')),
+        ),
+      ]),
+      if (_busy)
+        const Padding(
+            padding: EdgeInsets.only(top: 10),
+            child: LinearProgressIndicator()),
+      if (_message != null)
+        Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Text(_message!, style: AppText.bodyMd)),
       AsyncSection(
           title: 'Verificación',
           load: () => _api.get('/places/$_id/trust-stage'),
-          builder: (data) => Text('${data['label']}')),
+          builder: (data) => Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                      color: AppColors.primaryContainer.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(999)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.verified_outlined,
+                        size: 15, color: AppColors.primary),
+                    const SizedBox(width: 6),
+                    Text('${data['label']}',
+                        style: AppText.labelMd.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600)),
+                  ]),
+                ),
+              )),
       if (context.watch<AuthProvider>().isLoggedIn)
         AsyncSection(
             key: ValueKey('friends-$_revision'),
             title: 'Amigos que lo visitaron',
             load: () => _api.get('/places/$_id/friends-visited'),
-            builder: (data) => Column(children: [
-                  Text('${data['count']} visitas de amigos'),
-                  for (final friend in data['friends'] ?? [])
-                    ListTile(
-                        title: Text('${friend['fullName']}'),
-                        onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) =>
-                                    SocialScreen(userId: friend['id']))))
-                ])),
+            builder: (data) {
+              final friends = (data['friends'] as List? ?? []);
+              if (friends.isEmpty) {
+                return const _EmptyHint(
+                    icon: Icons.group_outlined,
+                    text:
+                        'Ningún amigo tuyo ha registrado una visita todavía.');
+              }
+              return _SectionBox(
+                  child: Column(children: [
+                for (var i = 0; i < friends.length; i++) ...[
+                  if (i > 0)
+                    const Divider(height: 14, color: AppColors.border),
+                  InkWell(
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) =>
+                            SocialScreen(userId: friends[i]['id']))),
+                    child: Row(children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: AppColors.primaryContainer,
+                        child: Text(
+                            _initial('${friends[i]['fullName'] ?? ''}'),
+                            style: AppText.bodyMd.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700)),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                          child: Text('${friends[i]['fullName']}',
+                              style: AppText.bodyLg)),
+                      const Icon(Icons.chevron_right_rounded,
+                          color: AppColors.onSurfaceVariant),
+                    ]),
+                  ),
+                ],
+              ]));
+            }),
       AsyncSection(
           title: 'Promociones',
           load: () => _api.get('/places/$_id/promotions'),
-          builder: (data) => Column(children: [
-                if ((data as List).isEmpty)
-                  const Text('No hay promociones vigentes.'),
-                for (final promo in data)
-                  ListTile(
-                      leading: const Icon(Icons.local_offer),
-                      title: Text('${promo['title']}'),
-                      subtitle: Text('${promo['description'] ?? ''}'))
-              ])),
+          builder: (data) {
+            final promos = data as List;
+            if (promos.isEmpty) {
+              return const _EmptyHint(
+                  icon: Icons.local_offer_outlined,
+                  text: 'No hay promociones vigentes.');
+            }
+            return Column(children: [
+              for (final promo in promos)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _SectionBox(
+                    child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.local_offer_rounded,
+                              size: 18, color: AppColors.primary),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('${promo['title']}',
+                                      style: AppText.bodyLg.copyWith(
+                                          fontWeight: FontWeight.w600)),
+                                  if ((promo['description'] ?? '')
+                                      .toString()
+                                      .isNotEmpty)
+                                    Text('${promo['description']}',
+                                        style: AppText.bodyMd),
+                                ]),
+                          ),
+                        ]),
+                  ),
+                ),
+            ]);
+          }),
       AsyncSection(
           title: 'Carta',
           load: () => _api.get('/places/$_id/menu'),
-          builder: (data) =>
-              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                for (final url in data['place']?['menuImageUrls'] ?? [])
-                  InkWell(
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => Scaffold(
-                              appBar: AppBar(title: const Text('Carta')),
-                              body: InteractiveViewer(
-                                  child: Image.network(url))))),
-                      child:
-                          Image.network(url, height: 200, fit: BoxFit.contain)),
-                if ((data['categories'] as List? ?? []).isEmpty &&
-                    (data['place']?['menuImageUrls'] as List? ?? []).isEmpty)
-                  const Text('Todavía no hay carta disponible.'),
-                for (final category in data['categories'] ?? [])
-                  ExpansionTile(
-                      initiallyExpanded: true,
-                      title: Text('${category['name']}'),
-                      children: [
-                        for (final dish in category['dishes'] ?? [])
-                          ListTile(
-                              title: Text('${dish['name']}'),
-                              subtitle: Text([
-                                dish['description'],
-                                if ((dish['ingredients'] as List? ?? [])
-                                    .isNotEmpty)
-                                  'Ingredientes: ${(dish['ingredients'] as List).join(', ')}',
-                                if ((dish['allergens'] as List? ?? [])
-                                    .isNotEmpty)
-                                  'Alérgenos: ${(dish['allergens'] as List).join(', ')}',
-                                if (dish['isAvailable'] == false)
-                                  'No disponible'
-                              ].whereType<String>().join('\n')),
-                              trailing: Text('S/ ${dish['price'] ?? '-'}'))
-                      ]),
-              ])),
+          builder: (data) {
+            final images = data['place']?['menuImageUrls'] as List? ?? [];
+            final categories = data['categories'] as List? ?? [];
+            if (images.isEmpty && categories.isEmpty) {
+              return const _EmptyHint(
+                  icon: Icons.menu_book_outlined,
+                  text: 'Todavía no hay carta disponible.');
+            }
+            return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final url in images)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: InkWell(
+                        onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => Scaffold(
+                                    appBar:
+                                        AppBar(title: const Text('Carta')),
+                                    body: InteractiveViewer(
+                                        child: Image.network(url))))),
+                        child: ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: Image.network(url,
+                                height: 200, fit: BoxFit.contain)),
+                      ),
+                    ),
+                  for (final category in categories)
+                    ExpansionTile(
+                        initiallyExpanded: true,
+                        tilePadding: EdgeInsets.zero,
+                        shape: const Border(),
+                        collapsedShape: const Border(),
+                        title: Text('${category['name']}',
+                            style: AppText.bodyLg
+                                .copyWith(fontWeight: FontWeight.w600)),
+                        children: [
+                          for (final dish in category['dishes'] ?? [])
+                            ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: Text('${dish['name']}',
+                                    style: AppText.bodyLg),
+                                subtitle: Text(
+                                    [
+                                      dish['description'],
+                                      if ((dish['ingredients'] as List? ?? [])
+                                          .isNotEmpty)
+                                        'Ingredientes: ${(dish['ingredients'] as List).join(', ')}',
+                                      if ((dish['allergens'] as List? ?? [])
+                                          .isNotEmpty)
+                                        'Alérgenos: ${(dish['allergens'] as List).join(', ')}',
+                                      if (dish['isAvailable'] == false)
+                                        'No disponible'
+                                    ].whereType<String>().join('\n'),
+                                    style: AppText.bodyMd),
+                                trailing: Text('S/ ${dish['price'] ?? '-'}',
+                                    style: AppText.bodyMd.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w700)))
+                        ]),
+                ]);
+          }),
       AsyncSection(
           key: ValueKey('dishes-$_revision'),
           title: 'Lo más pedido',
           load: () => _api.get('/checkins/places/$_id/top-dishes'),
-          builder: (data) => Column(children: [
-                if ((data as List).isEmpty)
-                  const Text('Aún no hay platos registrados.'),
-                for (final dish in data)
-                  ListTile(
-                      title: Text('${dish['dishName']}'),
-                      trailing: Text('${dish['orders']} pedidos'))
-              ])),
+          builder: (data) {
+            final dishes = data as List;
+            if (dishes.isEmpty) {
+              return const _EmptyHint(
+                  icon: Icons.ramen_dining_outlined,
+                  text: 'Aún no hay platos registrados.');
+            }
+            return _SectionBox(
+                child: Column(children: [
+              for (var i = 0; i < dishes.length; i++) ...[
+                if (i > 0) const Divider(height: 14, color: AppColors.border),
+                Row(children: [
+                  Text('${i + 1}',
+                      style: AppText.bodyMd.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                      child: Text('${dishes[i]['dishName']}',
+                          style: AppText.bodyLg)),
+                  Text('${dishes[i]['orders']} pedidos',
+                      style: AppText.labelMd),
+                ]),
+              ],
+            ]));
+          }),
       AsyncSection(
           title: 'Valoraciones',
           load: () => _api.get('/places/$_id/rating-distribution'),
-          builder: (data) => Column(children: [
-                for (final row in data)
-                  ListTile(
-                      title: Text('${row['rating']} ★'),
-                      trailing: Text('${row['count']} reseñas'))
-              ])),
-      AsyncSection(
-          title: 'TikTok',
-          load: () => _api.post('/places/$_id/tiktok-search'),
-          builder: (data) => Column(children: [
-                if ((data['videos'] as List? ?? []).isEmpty)
-                  Text(data['available'] == false
-                      ? 'TikTok no está disponible en este momento.'
-                      : 'No hay videos disponibles.'),
-                for (final video in data['videos'] ?? [])
-                  ListTile(
-                      title: Text('${video['caption'] ?? 'Ver video'}'),
-                      subtitle: Text('${video['authorName'] ?? ''}'),
-                      trailing: const Icon(Icons.open_in_new),
-                      onTap: () => openExternal(context, video['url']))
-              ])),
+          builder: (data) => _RatingBreakdown(rows: data as List)),
       Text('Horario y contacto', style: Theme.of(context).textTheme.titleLarge),
-      if ((details['googleReviews'] as List? ?? []).isNotEmpty)
-        ExpansionTile(title: const Text('Reseñas de Google'), children: [
-          for (final review in details['googleReviews'])
-            ListTile(
-                title: Text('${review['authorName']} · ${review['rating']} ★'),
-                subtitle: Text(
-                    '${review['text'] ?? ''}\n${review['relativeTimeDescription'] ?? ''}')),
-        ]),
       if ((details['openingHours'] as List? ?? []).isNotEmpty)
         for (final day in details['openingHours'])
           Text('${const {
@@ -297,7 +401,154 @@ class _PlaceExtrasState extends State<PlaceExtras> {
       for (final key in ['premios', 'certificaciones'])
         for (final value in meta[key] as List? ?? [])
           ListTile(leading: const Icon(Icons.verified), title: Text('$value')),
+      const SizedBox(height: 8),
+      Center(
+        child: TextButton.icon(
+          onPressed: _busy
+              ? null
+              : () async {
+                  if (!await _login() || !mounted) return;
+                  final sent = await showDialog<bool>(
+                      context: context,
+                      builder: (_) => InfoSuggestionDialog(placeId: _id));
+                  if (sent == true && mounted) {
+                    setState(
+                        () => _message = 'Gracias. Recibimos tu sugerencia.');
+                  }
+                },
+          icon: const Icon(Icons.flag_outlined, size: 16),
+          label: Text('Reportar información desactualizada',
+              style: AppText.labelMd.copyWith(color: AppColors.primary)),
+        ),
+      ),
     ]);
+  }
+}
+
+String _initial(String name) {
+  final trimmed = name.trim();
+  return trimmed.isEmpty ? '?' : trimmed[0].toUpperCase();
+}
+
+class _SectionBox extends StatelessWidget {
+  final Widget child;
+  const _SectionBox({required this.child});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: child,
+      );
+}
+
+/// Shared "nothing here yet" row, so every empty section reads the same
+/// instead of each one inventing its own bare sentence.
+class _EmptyHint extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _EmptyHint({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(children: [
+          Icon(icon, size: 18, color: AppColors.onSurfaceVariant),
+          const SizedBox(width: 10),
+          Expanded(child: Text(text, style: AppText.bodyMd)),
+        ]),
+      );
+}
+
+class _RatingBreakdown extends StatelessWidget {
+  final List rows;
+  const _RatingBreakdown({required this.rows});
+
+  @override
+  Widget build(BuildContext context) {
+    final counts = <int, int>{for (var star = 1; star <= 5; star++) star: 0};
+    for (final row in rows) {
+      final star = (row['rating'] as num?)?.toInt();
+      if (star != null && star >= 1 && star <= 5) {
+        counts[star] = (row['count'] as num?)?.toInt() ?? 0;
+      }
+    }
+    final total = counts.values.fold<int>(0, (sum, count) => sum + count);
+    if (total == 0) {
+      return const _EmptyHint(
+          icon: Icons.star_outline_rounded,
+          text: 'Todavía no hay valoraciones registradas.');
+    }
+    final average =
+        counts.entries.fold<double>(0, (sum, e) => sum + e.key * e.value) /
+            total;
+
+    return _SectionBox(
+      child: Row(children: [
+        Column(children: [
+          Text(average.toStringAsFixed(1),
+              style: AppText.headlineLg.copyWith(color: AppColors.primary)),
+          Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(
+                  5,
+                  (i) => Icon(
+                      i < average.round()
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      size: 13,
+                      color: AppColors.amber))),
+          const SizedBox(height: 3),
+          Text('$total ${total == 1 ? 'reseña' : 'reseñas'}',
+              style: AppText.labelMd),
+        ]),
+        const SizedBox(width: 18),
+        Expanded(
+          child: Column(children: [
+            for (var star = 5; star >= 1; star--)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(children: [
+                  SizedBox(
+                      width: 10,
+                      child: Text('$star',
+                          style: AppText.labelMd,
+                          textAlign: TextAlign.right)),
+                  const SizedBox(width: 3),
+                  const Icon(Icons.star_rounded,
+                      size: 11, color: AppColors.amber),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: counts[star]! / total,
+                        minHeight: 7,
+                        backgroundColor: AppColors.border,
+                        color: AppColors.amber,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                      width: 26,
+                      child: Text('${counts[star]}',
+                          style: AppText.labelMd,
+                          textAlign: TextAlign.right)),
+                ]),
+              ),
+          ]),
+        ),
+      ]),
+    );
   }
 }
 

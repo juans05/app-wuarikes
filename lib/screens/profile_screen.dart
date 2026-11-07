@@ -252,32 +252,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             const SizedBox(height: 6),
-            Center(
-              child: Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: _editProfile,
-                    icon: const Icon(Icons.edit_outlined, size: 16),
-                    label: const Text('Editar perfil'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () => inviteFriends(context),
-                    icon: const Icon(Icons.person_add_alt_1_outlined, size: 16),
-                    label: const Text('Invitar amigos'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const MyLoyaltyScreen())),
-                    icon: const Icon(Icons.loyalty_outlined, size: 16),
-                    label: const Text('Mis Fidelizaciones'),
-                  ),
-                ],
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              IconButton.outlined(
+                tooltip: 'Editar perfil',
+                onPressed: _editProfile,
+                icon: const Icon(Icons.edit_outlined),
               ),
-            ),
+              const SizedBox(width: 16),
+              IconButton.outlined(
+                tooltip: 'Invitar amigos',
+                onPressed: () => inviteFriends(context),
+                icon: const Icon(Icons.person_add_alt_1_outlined),
+              ),
+              const SizedBox(width: 16),
+              IconButton.outlined(
+                tooltip: 'Mis Fidelizaciones',
+                onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const MyLoyaltyScreen())),
+                icon: const Icon(Icons.loyalty_outlined),
+              ),
+            ]),
             const SizedBox(height: 12),
             ClipRRect(
               borderRadius: BorderRadius.circular(8),

@@ -382,12 +382,14 @@ class GamificationStats {
   final int xp;
   final int nextLevelXp;
   final int checkinsCount;
+  final int weeklyStreak;
 
   GamificationStats({
     required this.level,
     required this.xp,
     required this.nextLevelXp,
     required this.checkinsCount,
+    this.weeklyStreak = 0,
   });
 
   factory GamificationStats.fromJson(Map<String, dynamic> json) =>
@@ -396,6 +398,7 @@ class GamificationStats {
         xp: (json['xp'] as num?)?.toInt() ?? 0,
         nextLevelXp: (json['nextLevelXp'] as num?)?.toInt() ?? 1000,
         checkinsCount: (json['checkinsCount'] as num?)?.toInt() ?? 0,
+        weeklyStreak: (json['weeklyStreak'] as num?)?.toInt() ?? 0,
       );
 }
 

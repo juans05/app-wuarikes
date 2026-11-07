@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,6 +24,9 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
+  /// Bumped after every successful check-in so screens showing XP/streak can refresh.
+  static final checkinCreated = ValueNotifier<int>(0);
+
   final http.Client? client;
   ApiClient({this.client});
   Future<dynamic> get(String path, {Map<String, String>? query}) =>
@@ -318,6 +322,8 @@ class ApiClient {
     double? longitude,
     String? dishName,
     num? dishPrice,
+    bool? isMocked,
+    double? accuracyMeters,
   }) async {
     final result = await _request('POST', '/checkins', body: {
       'placeId': placeId,
@@ -328,7 +334,10 @@ class ApiClient {
       if (longitude != null) 'longitude': longitude,
       if (dishName != null && dishName.isNotEmpty) 'dishName': dishName,
       if (dishPrice != null) 'dishPrice': dishPrice,
+      if (isMocked != null) 'isMocked': isMocked,
+      if (accuracyMeters != null) 'accuracyMeters': accuracyMeters,
     });
+    checkinCreated.value++;
     return CheckinItem.fromJson(result as Map<String, dynamic>);
   }
 

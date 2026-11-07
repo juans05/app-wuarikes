@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/api_client.dart';
+import '../core/app_theme.dart';
 import '../core/models.dart';
 import '../state/auth_provider.dart';
 import '../core/external_actions.dart';
@@ -132,61 +133,16 @@ class _FeedScreenState extends State<FeedScreen> {
                             _load(reset: true);
                           }),
               for (final item in _items)
-                Card(
-                    child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              if (item.userId != null)
-                                TextButton(
-                                    onPressed: () => Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                            builder: (_) => SocialScreen(
-                                                userId: item.userId))),
-                                    child:
-                                        Text(item.userFullName ?? 'Usuario')),
-                              if (item.place != null)
-                                TextButton(
-                                    onPressed: () => Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                            builder: (_) => PlaceDetailScreen(
-                                                placeId: item.place!.id))),
-                                    child: Text(item.place!.name)),
-                              if (item.rating != null)
-                                Text('${item.rating} / 5 ★'),
-                              if (item.comment != null) Text(item.comment!),
-                              if (item.dishName != null)
-                                Text(
-                                    '${item.dishName}${item.dishPrice == null ? '' : ' · S/ ${item.dishPrice}'}'),
-                              if (item.photoUrl != null)
-                                Image.network(item.photoUrl!,
-                                    height: 200,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) =>
-                                        const Icon(Icons.broken_image)),
-                              Text(item.createdAt.split('T').first),
-                              Row(children: [
-                                TextButton.icon(
-                                    onPressed: widget.history ||
-                                            _liking.contains(item.id) ||
-                                            _loading
-                                        ? null
-                                        : () => _like(item),
-                                    icon: Icon(item.isLikedByMe
-                                        ? Icons.favorite
-                                        : Icons.favorite_border),
-                                    label: Text('${item.likesCount}')),
-                                const Spacer(),
-                                IconButton(
-                                    tooltip: 'Compartir',
-                                    onPressed: () => sharePlace(
-                                        context,
-                                        item.place?.id ?? item.placeId,
-                                        item.place?.name ?? 'Wuarikes'),
-                                    icon: const Icon(Icons.share))
-                              ]),
-                            ]))),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: _CheckinCard(
+                    item: item,
+                    canLike: !widget.history &&
+                        !_liking.contains(item.id) &&
+                        !_loading,
+                    onLike: () => _like(item),
+                  ),
+                ),
               if (_error != null)
                 Text(_error!, style: const TextStyle(color: Colors.red)),
               if (_loading) const LinearProgressIndicator(),
@@ -200,4 +156,154 @@ class _FeedScreenState extends State<FeedScreen> {
                     child: Text(_error != null ? 'Reintentar' : 'Cargar más')),
             ])),
       );
+}
+
+class _CheckinCard extends StatelessWidget {
+  final CheckinItem item;
+  final bool canLike;
+  final VoidCallback onLike;
+  const _CheckinCard(
+      {required this.item, required this.canLike, required this.onLike});
+
+  @override
+  Widget build(BuildContext context) {
+    final rawName = item.userFullName?.trim() ?? '';
+    final name = rawName.isEmpty ? 'Usuario' : rawName;
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadows.card,
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: AppColors.primaryContainer,
+            child: Text(name[0].toUpperCase(),
+                style: AppText.bodyLg.copyWith(
+                    color: AppColors.primary, fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              InkWell(
+                onTap: item.userId == null
+                    ? null
+                    : () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => SocialScreen(userId: item.userId))),
+                child: Text(name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.bodyLg.copyWith(fontWeight: FontWeight.w600)),
+              ),
+              if (item.place != null)
+                InkWell(
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) =>
+                          PlaceDetailScreen(placeId: item.place!.id))),
+                  child: Row(children: [
+                    const Icon(Icons.place_outlined,
+                        size: 13, color: AppColors.primary),
+                    const SizedBox(width: 3),
+                    Expanded(
+                      child: Text(item.place!.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.labelMd.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                  ]),
+                ),
+            ]),
+          ),
+          if (item.rating != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                  color: AppColors.amber.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(20)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.star_rounded, size: 14, color: AppColors.amber),
+                const SizedBox(width: 2),
+                Text('${item.rating}',
+                    style: AppText.labelMd.copyWith(
+                        color: AppColors.onSurface,
+                        fontWeight: FontWeight.w700)),
+              ]),
+            ),
+        ]),
+        if (item.comment != null && item.comment!.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text(item.comment!, style: AppText.bodyLg),
+        ],
+        if (item.dishName != null) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+                color: AppColors.surface,
+                border: Border.all(color: AppColors.border),
+                borderRadius: BorderRadius.circular(20)),
+            child: Text(
+                '${item.dishName}${item.dishPrice == null ? '' : ' · S/ ${item.dishPrice}'}',
+                style: AppText.labelMd
+                    .copyWith(color: AppColors.onSurface)),
+          ),
+        ],
+        if (item.photoUrl != null) ...[
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.network(item.photoUrl!,
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                    height: 200,
+                    color: AppColors.surface,
+                    child: const Icon(Icons.broken_image,
+                        color: AppColors.onSurfaceVariant))),
+          ),
+        ],
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 6),
+          child: Divider(height: 1, color: AppColors.border),
+        ),
+        Row(children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: canLike ? onLike : null,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(
+                    item.isLikedByMe
+                        ? Icons.favorite
+                        : Icons.favorite_border,
+                    size: 18,
+                    color: item.isLikedByMe
+                        ? AppColors.primary
+                        : AppColors.onSurfaceVariant),
+                const SizedBox(width: 5),
+                Text('${item.likesCount}', style: AppText.labelMd),
+              ]),
+            ),
+          ),
+          const Spacer(),
+          Text(item.createdAt.split('T').first, style: AppText.labelMd),
+          const SizedBox(width: 4),
+          IconButton(
+              tooltip: 'Compartir',
+              visualDensity: VisualDensity.compact,
+              onPressed: () => sharePlace(context,
+                  item.place?.id ?? item.placeId, item.place?.name ?? 'Wuarikes'),
+              icon: const Icon(Icons.share_outlined,
+                  size: 18, color: AppColors.onSurfaceVariant)),
+        ]),
+      ]),
+    );
+  }
 }

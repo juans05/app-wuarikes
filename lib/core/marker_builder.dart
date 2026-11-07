@@ -1,10 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'app_theme.dart';
+import 'place_image.dart';
 
-/// Circular avatar map pin (photo + purple ring + pointer) matching the
-/// "Map Pins" spec in the Stitch design system. Falls back to a plain
-/// purple pin with a restaurant icon if there's no photo.
+/// Circular avatar map pin (photo + ring + pointer) matching the "Map Pins"
+/// spec in the Stitch design system. Falls back to the Wuarikes logo when the
+/// place has no photo.
 class MapPin extends StatelessWidget {
   final String? imageUrl;
   final double size;
@@ -33,13 +33,7 @@ class MapPin extends StatelessWidget {
                 color: Colors.white,
                 padding: const EdgeInsets.all(2),
                 child: ClipOval(
-                  child: imageUrl != null && imageUrl!.isNotEmpty
-                      ? CachedNetworkImage(imageUrl: imageUrl!, fit: BoxFit.cover)
-                      : Container(
-                          color: AppColors.primary.withValues(alpha: 0.12),
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.restaurant_rounded, size: 18, color: AppColors.primary),
-                        ),
+                  child: PlaceImage(imageUrl: imageUrl, logoPadding: 1),
                 ),
               ),
             ),

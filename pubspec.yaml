@@ -25,9 +25,10 @@ dependencies:
   url_launcher: ^6.3.2
   share_plus: ^13.3.0
   video_player: ^2.11.1
-  geofence_service: ^6.0.0+1
+  geofence_foreground_service: ^1.0.0
+  device_info_plus: 13.2.0
   flutter_local_notifications: ^22.3.1
-  disable_battery_optimization: ^1.1.2
+  timezone: ^0.11.1
 
 dev_dependencies:
   flutter_test:
@@ -36,3 +37,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/logo-icon.png

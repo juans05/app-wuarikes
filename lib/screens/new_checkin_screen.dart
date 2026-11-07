@@ -33,7 +33,17 @@ class _NewCheckinScreenState extends State<NewCheckinScreen> {
   bool _submitting = false;
   bool _done = false;
   int _earnedPoints = 0;
+  GamificationStats? _statsBefore;
+  GamificationStats? _statsAfter;
   String? _error;
+
+  Future<GamificationStats?> _statsOrNull() async {
+    try {
+      return await _api.getMyStats();
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<void> _pickPhoto() async {
     final file = await ImagePicker().pickImage(
@@ -64,6 +74,8 @@ class _NewCheckinScreenState extends State<NewCheckinScreen> {
       final position = await Geolocator.getCurrentPosition(
           locationSettings:
               const LocationSettings(timeLimit: Duration(seconds: 20)));
+      // Best effort: the reward screen degrades gracefully without stats.
+      _statsBefore = await _statsOrNull();
       String? photoUrl;
       if (_photo != null) {
         final bytes = await _photo!.readAsBytes();
@@ -80,14 +92,18 @@ class _NewCheckinScreenState extends State<NewCheckinScreen> {
         photoUrl: photoUrl,
         dishName: _dishCtrl.text.trim(),
         dishPrice: price,
+        isMocked: position.isMocked,
+        accuracyMeters: position.accuracy,
       );
+      final after = await _statsOrNull();
       if (!mounted) return;
       setState(() {
         _done = true;
-        _earnedPoints = 10 + (photoUrl != null ? 5 : 0);
+        _statsAfter = after;
+        _earnedPoints = (after != null && _statsBefore != null)
+            ? after.xp - _statsBefore!.xp
+            : 10 + (photoUrl != null ? 5 : 0);
       });
-      await Future.delayed(const Duration(milliseconds: 1200));
-      if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted)
         setState(() => _error =
@@ -100,21 +116,11 @@ class _NewCheckinScreenState extends State<NewCheckinScreen> {
   @override
   Widget build(BuildContext context) {
     if (_done) {
-      return Scaffold(
-        backgroundColor: AppColors.surface,
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.celebration_rounded,
-                  color: AppColors.primary, size: 56),
-              const SizedBox(height: 12),
-              Text('¡Check-in registrado!', style: AppText.headlineMobile),
-              const SizedBox(height: 4),
-              Text('Ganaste +$_earnedPoints puntos', style: AppText.bodyMd),
-            ],
-          ),
-        ),
+      return _RewardView(
+        points: _earnedPoints,
+        before: _statsBefore,
+        after: _statsAfter,
+        onDone: () => Navigator.of(context).pop(),
       );
     }
 
@@ -295,6 +301,87 @@ class _NewCheckinScreenState extends State<NewCheckinScreen> {
               Center(
                   child: Text('Publicarás esta reseña en tu feed de comunidad.',
                       style: AppText.labelMd)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Post check-in celebration: XP earned, progress to the next level and the
+/// weekly streak — the moment that makes the next visit feel worth it.
+class _RewardView extends StatelessWidget {
+  final int points;
+  final GamificationStats? before;
+  final GamificationStats? after;
+  final VoidCallback onDone;
+  const _RewardView(
+      {required this.points,
+      required this.before,
+      required this.after,
+      required this.onDone});
+
+  @override
+  Widget build(BuildContext context) {
+    final a = after;
+    final leveledUp = a != null && before != null && a.level > before!.level;
+    final streakGrew =
+        a != null && before != null && a.weeklyStreak > before!.weeklyStreak;
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(Icons.celebration_rounded,
+                  color: AppColors.primary, size: 64),
+              const SizedBox(height: 12),
+              Text(leveledUp ? '¡Subiste de nivel!' : '¡Check-in registrado!',
+                  textAlign: TextAlign.center, style: AppText.headlineMobile),
+              const SizedBox(height: 4),
+              Text('+$points XP',
+                  textAlign: TextAlign.center,
+                  style: AppText.titleLg.copyWith(color: AppColors.primary)),
+              if (a != null) ...[
+                const SizedBox(height: 24),
+                LinearProgressIndicator(
+                  value: a.nextLevelXp == 0
+                      ? 0
+                      : (a.xp / a.nextLevelXp).clamp(0.0, 1.0),
+                  minHeight: 10,
+                  borderRadius: BorderRadius.circular(8),
+                  color: AppColors.primary,
+                  backgroundColor: AppColors.primaryContainer,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                    'Nivel ${a.level} · te faltan ${(a.nextLevelXp - a.xp).clamp(0, a.nextLevelXp)} XP para el siguiente',
+                    textAlign: TextAlign.center,
+                    style: AppText.bodyMd),
+                if (a.weeklyStreak > 0) ...[
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3D6),
+                        borderRadius: BorderRadius.circular(16)),
+                    child: Text(
+                        streakGrew
+                            ? '🔥 ¡Racha de ${a.weeklyStreak} semanas seguidas!'
+                            : '🔥 Racha: ${a.weeklyStreak} semanas seguidas',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Color(0xFF8A6100),
+                            fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ],
+              const SizedBox(height: 32),
+              FilledButton(onPressed: onDone, child: const Text('Listo')),
             ],
           ),
         ),

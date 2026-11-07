@@ -51,3 +51,14 @@ app.*.map.json
 /.omc/
 /.playwright-mcp/
 /.superpowers/
+
+# Llave de firma de la app y sus contraseñas. NUNCA deben subirse: quien tenga
+# el .jks y la contraseña puede publicar actualizaciones falsas de Wuarikes.
+# Si se pierde la llave, la app no se puede volver a actualizar en Play Store.
+*.jks
+*.keystore
+/android/key.properties
+
+# Estado de herramientas en cualquier carpeta
+**/.omc/
+build_errors.txt

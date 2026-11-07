@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/api_client.dart';
 import '../core/app_theme.dart';
 import '../core/models.dart';
+import '../core/place_image.dart';
 import '../state/auth_provider.dart';
 import '../widgets/login_required_view.dart';
 import 'place_detail_screen.dart';
@@ -138,15 +139,12 @@ class _LoyaltyCardTile extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: card.placeCoverImageUrl != null
-                  ? Image.network(card.placeCoverImageUrl!,
-                      width: 56, height: 56, fit: BoxFit.cover)
-                  : Container(
-                      width: 56,
-                      height: 56,
-                      color: AppColors.primaryContainer,
-                      child: const Icon(Icons.storefront_outlined,
-                          color: AppColors.primary)),
+              child: SizedBox(
+                width: 56,
+                height: 56,
+                child: PlaceImage(
+                    imageUrl: card.placeCoverImageUrl, logoPadding: 4),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(

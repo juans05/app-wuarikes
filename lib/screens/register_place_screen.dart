@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import '../core/api_client.dart';
@@ -25,6 +27,8 @@ class _RegisterPlaceScreenState extends State<RegisterPlaceScreen> {
   final MapController _mapController = MapController();
   LatLng _center = _defaultCenter;
   bool _locationConfirmed = false;
+  bool _mapReady = false;
+  bool _confirming = false;
 
   final _nameCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
@@ -84,24 +88,155 @@ class _RegisterPlaceScreenState extends State<RegisterPlaceScreen> {
     } catch (_) {}
   }
 
-  Future<Position?> _resolveCurrentPosition() async {
+  /// Asks the user before sending them to a system settings screen, since
+  /// leaving the app mid-form is disruptive if they didn't ask for it.
+  Future<void> _offerToEnable(String title, String message, Future<bool> Function() open) async {
+    if (!mounted) return;
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Ahora no')),
+          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Activar')),
+        ],
+      ),
+    );
+    if (accepted == true) await open();
+  }
+
+  Future<Position?> _resolveCurrentPosition({bool prompt = false}) async {
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      if (prompt) {
+        await _offerToEnable(
+          'Activa la ubicación',
+          'Tu GPS está apagado, por eso el mapa no puede centrarse donde estás. ¿Lo activamos?',
+          Geolocator.openLocationSettings,
+        );
+      }
+      return null;
+    }
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
-    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) return null;
-    if (!await Geolocator.isLocationServiceEnabled()) return null;
-    return Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.low));
+    if (permission == LocationPermission.deniedForever) {
+      if (prompt) {
+        await _offerToEnable(
+          'Permiso de ubicación',
+          'Bloqueaste el permiso de ubicación para Wuarikes. Ábrelo en Ajustes para centrar el mapa donde estás.',
+          Geolocator.openAppSettings,
+        );
+      }
+      return null;
+    }
+    if (permission == LocationPermission.denied) return null;
+    return Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+    );
   }
 
-  Future<void> _resolveInitialLocation() async {
+  Future<void> _goToCurrentPosition({bool prompt = false}) async {
     try {
-      final pos = await _resolveCurrentPosition();
-      if (pos != null && mounted) {
-        setState(() => _center = LatLng(pos.latitude, pos.longitude));
-        _mapController.move(_center, _mapController.camera.zoom);
+      final pos = await _resolveCurrentPosition(prompt: prompt);
+      if (pos == null || !mounted) return;
+      setState(() {
+        _center = LatLng(pos.latitude, pos.longitude);
+        _locationConfirmed = false;
+      });
+      if (_mapReady) _mapController.move(_center, 16);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo obtener tu ubicación.')),
+        );
       }
-    } catch (_) {}
+    }
+  }
+
+  Future<void> _resolveInitialLocation() => _goToCurrentPosition(prompt: true);
+
+  /// Accent- and case-insensitive, and tolerant of the "Provincia de X" /
+  /// "Distrito de X" wrappers Mapbox sometimes returns.
+  static String _norm(String value) {
+    const accented = 'áàäâãéèëêíìïîóòöôõúùüûñ';
+    const plain = 'aaaaaeeeeiiiiooooouuuun';
+    var out = value.toLowerCase().trim();
+    for (var i = 0; i < accented.length; i++) {
+      out = out.replaceAll(accented[i], plain[i]);
+    }
+    for (final prefix in ['departamento de ', 'provincia de ', 'distrito de ', 'region ']) {
+      if (out.startsWith(prefix)) out = out.substring(prefix.length);
+    }
+    return out.trim();
+  }
+
+  static String? _matchIn(List<String> options, List<String> candidates) {
+    for (final candidate in candidates) {
+      final target = _norm(candidate);
+      for (final option in options) {
+        if (_norm(option) == target) return option;
+      }
+    }
+    return null;
+  }
+
+  /// Reverse-geocodes the pin and fills address + ubigeo dropdowns. Only
+  /// assigns values that exist in the backend's lists — a dropdown whose value
+  /// isn't among its items throws.
+  Future<void> _fillAddressFromPin() async {
+    final uri = Uri.parse(
+      'https://api.mapbox.com/search/geocode/v6/reverse'
+      '?longitude=${_center.longitude}&latitude=${_center.latitude}'
+      '&language=es&access_token=$mapboxAccessToken',
+    );
+    final response = await http.get(uri).timeout(const Duration(seconds: 12));
+    if (response.statusCode != 200) return;
+    final features = jsonDecode(response.body)['features'] as List?;
+    if (features == null || features.isEmpty) return;
+
+    final context = (features.first['properties']?['context'] as Map<String, dynamic>?) ?? {};
+    String? level(String key) => (context[key] as Map<String, dynamic>?)?['name'] as String?;
+
+    final street = level('address') ?? level('street');
+    if (street != null && _addressCtrl.text.trim().isEmpty) _addressCtrl.text = street;
+
+    // Mapbox doesn't map its levels onto Peru's ubigeo consistently, so every
+    // level is a candidate and the backend lists decide which one fits where.
+    final candidates = ['region', 'district', 'place', 'locality', 'neighborhood']
+        .map(level)
+        .whereType<String>()
+        .toList();
+
+    final department = _matchIn(_departments, candidates);
+    if (department == null) return;
+    await _onDepartmentChanged(department);
+
+    final province = _matchIn(_provinces, candidates);
+    if (province == null) return;
+    await _onProvinceChanged(province);
+
+    final district = _matchIn(_districts, candidates);
+    if (district != null && mounted) setState(() => _district = district);
+  }
+
+  Future<void> _confirmLocation() async {
+    setState(() {
+      _locationConfirmed = true;
+      _confirming = true;
+    });
+    try {
+      await _fillAddressFromPin();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No pudimos completar la dirección sola. Complétala a mano.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _confirming = false);
+    }
   }
 
   Future<void> _pickPhoto(List<XFile> target, int max) async {
@@ -262,6 +397,10 @@ class _RegisterPlaceScreenState extends State<RegisterPlaceScreen> {
                           initialCenter: _center,
                           initialZoom: 15,
                           interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
+                          onMapReady: () {
+                            _mapReady = true;
+                            if (_center != _defaultCenter) _mapController.move(_center, 16);
+                          },
                           onPositionChanged: (pos, hasGesture) {
                             _center = pos.center;
                             if (hasGesture) setState(() => _locationConfirmed = false);
@@ -279,25 +418,7 @@ class _RegisterPlaceScreenState extends State<RegisterPlaceScreen> {
                       heroTag: 'locateNewPlace',
                       backgroundColor: Colors.white,
                       foregroundColor: AppColors.primary,
-                      onPressed: () async {
-                        try {
-                          final pos = await _resolveCurrentPosition();
-                          if (pos != null) {
-                            _center = LatLng(pos.latitude, pos.longitude);
-                            _mapController.move(_center, _mapController.camera.zoom);
-                          } else if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Activa el permiso de ubicación para usar esto.')),
-                            );
-                          }
-                        } catch (_) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('No se pudo obtener tu ubicación.')),
-                            );
-                          }
-                        }
-                      },
+                      onPressed: () => _goToCurrentPosition(prompt: true),
                       child: const Icon(Icons.my_location_rounded),
                     ),
                   ),
@@ -305,11 +426,20 @@ class _RegisterPlaceScreenState extends State<RegisterPlaceScreen> {
               ),
               const SizedBox(height: 10),
               OutlinedButton(
-                onPressed: () => setState(() => _locationConfirmed = true),
+                onPressed: _confirming ? null : _confirmLocation,
                 style: OutlinedButton.styleFrom(
                   backgroundColor: _locationConfirmed ? AppColors.primaryContainer : null,
                 ),
-                child: Text(_locationConfirmed ? 'Ubicación confirmada ✓' : 'Confirmar ubicación'),
+                child: _confirming
+                    ? Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2)),
+                        const SizedBox(width: 10),
+                        Text('Buscando dirección...', style: AppText.bodyMd),
+                      ])
+                    : Text(_locationConfirmed ? 'Ubicación confirmada ✓' : 'Confirmar ubicación'),
               ),
               const SizedBox(height: 24),
               Row(children: [
