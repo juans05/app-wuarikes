@@ -62,3 +62,6 @@ app.*.map.json
 # Estado de herramientas en cualquier carpeta
 **/.omc/
 build_errors.txt
+
+# Llaves que se pasan al compilar (--dart-define-from-file)
+dart_defines.json
