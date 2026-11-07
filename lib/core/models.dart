@@ -161,6 +161,7 @@ class Place {
                 ?.map((e) => GoogleReview.fromJson(e as Map<String, dynamic>))
                 .toList() ??
             const [],
+        hasActiveBenefit: json['hasActiveBenefit'] as bool? ?? false,
       );
 }
 

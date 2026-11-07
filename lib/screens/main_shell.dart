@@ -18,12 +18,15 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _index = 0;
 
-  static const _screens = [
-    ExploreScreen(),
-    FeedScreen(),
-    MyLoyaltyScreen(),
-    ProfileScreen(),
-  ];
+  static const _profileIndex = 3;
+
+  // Getter (no const): el avatar de Explorar cambia a la pestaña Perfil.
+  List<Widget> get _screens => [
+        ExploreScreen(onOpenProfile: () => setState(() => _index = _profileIndex)),
+        const FeedScreen(),
+        const MyLoyaltyScreen(),
+        const ProfileScreen(),
+      ];
 
   @override
   Widget build(BuildContext context) {

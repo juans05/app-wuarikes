@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -10,6 +11,8 @@ import '../core/marker_builder.dart';
 import '../core/models.dart';
 import '../core/place_image.dart';
 import '../state/auth_provider.dart';
+import '../widgets/explore_bottom_list.dart';
+import '../widgets/mode_switch.dart';
 import 'advanced_filters_screen.dart';
 import 'filter_screen.dart';
 import 'place_detail_screen.dart';
@@ -26,15 +29,31 @@ const _defaultCenter = LatLng(-12.1211, -77.0296);
 enum _LocationIssue { serviceOff, denied, blocked, unavailable }
 
 class ExploreScreen extends StatefulWidget {
-  const ExploreScreen({super.key});
+  /// Abre la pestaña Perfil (la pone el shell). Sin ella el avatar no hace nada.
+  final VoidCallback? onOpenProfile;
+
+  /// Solo para pruebas: cliente de API con datos de mentira.
+  final ApiClient? api;
+
+  const ExploreScreen({super.key, this.onOpenProfile, this.api});
 
   @override
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
-  final ApiClient _api = ApiClient();
+  late final ApiClient _api = widget.api ?? ApiClient();
   final MapController _mapController = MapController();
+
+  /// Locales o Ahora. En `now` Explorar sigue mostrando el mapa y la lista de
+  /// locales: la capa Ahora (pines, franja "Hoy cerca de ti") se engancha en
+  /// los puntos marcados "AHORA" de [build].
+  ExploreMode _mode = ExploreMode.places;
+
+  /// Alto actual de la lista deslizable (fracción 0..1), para subir el botón
+  /// "mi ubicación" junto con ella.
+  final ValueNotifier<double> _sheetExtent =
+      ValueNotifier(ExploreBottomList.initialExtent);
 
   List<Place> _places = [];
   List<Category> _categories = [];
@@ -77,6 +96,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   void dispose() {
     ApiClient.checkinCreated.removeListener(_loadStats);
+    _sheetExtent.dispose();
     super.dispose();
   }
 
@@ -295,6 +315,26 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
+  void _openPlaceDetail(Place place) {
+    Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => PlaceDetailScreen(placeId: place.id)));
+  }
+
+  void _openDiscovery() {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const DiscoveryScreen()));
+  }
+
+  /// Metros del usuario al local; null si no se sabe dónde está alguno.
+  double? _distanceTo(Place place) {
+    final position = _position;
+    if (position == null || place.latitude == null || place.longitude == null) {
+      return null;
+    }
+    return Geolocator.distanceBetween(position.latitude, position.longitude,
+        place.latitude!, place.longitude!);
+  }
+
   @override
   Widget build(BuildContext context) {
     final initialTarget = _position != null
@@ -302,157 +342,152 @@ class _ExploreScreenState extends State<ExploreScreen> {
         : _defaultCenter;
 
     return Scaffold(
-      body: Stack(
-        children: [
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: initialTarget,
-              initialZoom: 14,
-              onMapReady: () {
-                _mapReady = true;
-                if (_position != null) {
-                  _mapController.move(
-                      LatLng(_position!.latitude, _position!.longitude), 15);
-                }
-              },
-              interactionOptions: const InteractionOptions(
-                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
+      body: LayoutBuilder(
+        builder: (context, constraints) => Stack(
+          children: [
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: initialTarget,
+                initialZoom: 14,
+                onMapReady: () {
+                  _mapReady = true;
+                  if (_position != null) {
+                    _mapController.move(
+                        LatLng(_position!.latitude, _position!.longitude), 15);
+                  }
+                },
+                interactionOptions: const InteractionOptions(
+                    flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
+              ),
+              children: [
+                buildMapboxTileLayer(),
+                // AHORA (Task 9): aquí, antes de los pines de locales, va la
+                // capa de pines de _mode == ExploreMode.now.
+                MarkerLayer(markers: _markers),
+                if (_position != null)
+                  MarkerLayer(markers: [
+                    Marker(
+                      point: LatLng(_position!.latitude, _position!.longitude),
+                      child: const Icon(Icons.circle,
+                          color: AppColors.primary, size: 16),
+                    ),
+                  ]),
+              ],
             ),
-            children: [
-              buildMapboxTileLayer(),
-              MarkerLayer(markers: _markers),
-              if (_position != null)
-                MarkerLayer(markers: [
-                  Marker(
-                    point: LatLng(_position!.latitude, _position!.longitude),
-                    child: const Icon(Icons.circle,
-                        color: AppColors.primary, size: 16),
-                  ),
-                ]),
-            ],
-          ),
 
-          // Floating search bar + filter chips.
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Column(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(999),
-                      boxShadow: [
-                        BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.12),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4))
-                      ],
-                    ),
-                    child: TextField(
-                      readOnly: true,
-                      showCursor: false,
-                      onTap: () => _openSearchResults(),
-                      decoration: const InputDecoration(
-                        hintText: 'Buscar huariques...',
-                        border: InputBorder.none,
-                        prefixIcon: Icon(Icons.search_rounded),
-                        suffixIcon: CircleAvatar(
-                          radius: 16,
-                          backgroundColor: AppColors.primaryContainer,
-                          child: Icon(Icons.person,
-                              size: 18, color: AppColors.primary),
-                        ),
-                        contentPadding: EdgeInsets.symmetric(vertical: 4),
-                      ),
-                    ),
-                  ),
-                  if (_stats != null) ...[
-                    const SizedBox(height: 8),
-                    _ProgressPill(stats: _stats!),
-                  ],
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 40,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: [
-                        _TuneButton(
-                            onTap: () => _showAdvancedFilters(context),
-                            active: _hasAdvancedFilters),
-                        const SizedBox(width: 8),
-                        _FilterChip(
-                          label: _activeCategoryName ?? 'Categoría',
-                          icon: Icons.expand_more_rounded,
-                          onTap: () => _showCategoryPicker(context),
-                          active: _activeCategory != null,
-                        ),
-                        const SizedBox(width: 8),
-                        _FilterChip(
-                          label: 'Abierto ahora',
-                          icon: Icons.schedule_outlined,
-                          active: _openNow,
-                          onTap: () {
-                            setState(() => _openNow = !_openNow);
-                            _loadPlaces();
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        _FilterChip(
-                          label: _position != null
-                              ? '${_radiusKm.toStringAsFixed(0)} km'
-                              : 'Distancia',
-                          icon: Icons.social_distance_outlined,
-                          active: _position != null,
-                          onTap: () => _showRadiusPicker(context),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (_locationIssue != null) ...[
-                    const SizedBox(height: 10),
-                    _LocationBanner(
-                        issue: _locationIssue!, onFix: _fixLocation),
-                  ],
-                ],
+            // Lista deslizable. Va antes del buscador para que éste quede encima
+            // cuando la lista se estira.
+            Positioned.fill(
+              child: ExploreBottomList(
+                places: _places,
+                openNow: _openNow,
+                distanceMeters: _distanceTo,
+                onPlaceTap: _openPlaceDetail,
+                onSurprise: _openDiscovery,
+                onExtentChanged: (e) => _sheetExtent.value = e,
               ),
             ),
-          ),
 
-          Positioned(
-            left: 16,
-            bottom: 24,
-            child: FloatingActionButton.extended(
-              heroTag: 'discover',
-              onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const DiscoveryScreen())),
-              icon: const Icon(Icons.auto_awesome),
-              label: const Text('¿Dónde comemos?'),
+            // Buscador + avatar, interruptor Locales/Ahora y filtros.
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Column(
+                  children: [
+                    Row(children: [
+                      Expanded(child: _SearchPill(onTap: _openSearchResults)),
+                      const SizedBox(width: 8),
+                      _ProfileAvatar(onTap: widget.onOpenProfile),
+                    ]),
+                    const SizedBox(height: 8),
+                    ModeSwitch(
+                        value: _mode,
+                        onChanged: (m) => setState(() => _mode = m)),
+                    // AHORA (Task 9): la franja "Hoy cerca de ti" va aquí
+                    // cuando _mode == ExploreMode.now.
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 40,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          _TuneButton(
+                              onTap: () => _showAdvancedFilters(context),
+                              active: _hasAdvancedFilters),
+                          const SizedBox(width: 8),
+                          _FilterChip(
+                            label: _activeCategoryName ?? 'Categoría',
+                            icon: Icons.expand_more_rounded,
+                            onTap: () => _showCategoryPicker(context),
+                            active: _activeCategory != null,
+                          ),
+                          const SizedBox(width: 8),
+                          _FilterChip(
+                            label: 'Abierto ahora',
+                            icon: Icons.schedule_outlined,
+                            active: _openNow,
+                            onTap: () {
+                              setState(() => _openNow = !_openNow);
+                              _loadPlaces();
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          _FilterChip(
+                            label: _position != null
+                                ? '${_radiusKm.toStringAsFixed(0)} km'
+                                : 'Distancia',
+                            icon: Icons.social_distance_outlined,
+                            active: _position != null,
+                            onTap: () => _showRadiusPicker(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_stats != null) ...[
+                      const SizedBox(height: 8),
+                      _ProgressPill(stats: _stats!),
+                    ],
+                    if (_locationIssue != null) ...[
+                      const SizedBox(height: 10),
+                      _LocationBanner(
+                          issue: _locationIssue!, onFix: _fixLocation),
+                    ],
+                  ],
+                ),
+              ),
             ),
-          ),
-          // My-location FAB.
-          Positioned(
-            right: 16,
-            bottom: 24,
-            child: FloatingActionButton(
-              heroTag: 'locate',
-              mini: true,
-              backgroundColor: Colors.white,
-              foregroundColor: AppColors.primary,
-              onPressed: () {
-                if (_position == null) {
-                  _fixLocation();
-                  return;
-                }
-                _mapController.move(
-                    LatLng(_position!.latitude, _position!.longitude),
-                    _mapController.camera.zoom);
+
+            // My-location FAB: sube y baja con la lista; se esconde si ésta
+            // cubre media pantalla.
+            ValueListenableBuilder<double>(
+              valueListenable: _sheetExtent,
+              builder: (context, extent, _) {
+                if (extent > 0.5) return const SizedBox.shrink();
+                return Positioned(
+                  right: 16,
+                  bottom: extent * constraints.maxHeight + 12,
+                  child: FloatingActionButton(
+                    heroTag: 'locate',
+                    mini: true,
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppColors.primary,
+                    onPressed: () {
+                      if (_position == null) {
+                        _fixLocation();
+                        return;
+                      }
+                      _mapController.move(
+                          LatLng(_position!.latitude, _position!.longitude),
+                          _mapController.camera.zoom);
+                    },
+                    child: const Icon(Icons.my_location_rounded),
+                  ),
+                );
               },
-              child: const Icon(Icons.my_location_rounded),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -538,6 +573,83 @@ class _ExploreScreenState extends State<ExploreScreen> {
     });
     _loadPlaces();
     _openSearchResults(filters: result);
+  }
+}
+
+/// Buscador de arriba: toda la pastilla abre la búsqueda.
+class _SearchPill extends StatelessWidget {
+  final VoidCallback onTap;
+  const _SearchPill({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppShadows.card,
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(children: [
+              const Icon(Icons.search_rounded,
+                  color: AppColors.onSurfaceVariant),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('¿Qué se te antoja?',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.bodyLg
+                        .copyWith(color: AppColors.onSurfaceVariant)),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Avatar de la cuenta; toca para ir a la pestaña Perfil. Sin [onTap] es solo
+/// decorativo.
+class _ProfileAvatar extends StatelessWidget {
+  final VoidCallback? onTap;
+  const _ProfileAvatar({this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final url = context.watch<AuthProvider>().user?.avatarUrl;
+    final hasPhoto = url != null && url.isNotEmpty;
+    return Semantics(
+      button: onTap != null,
+      label: 'Abrir mi perfil',
+      child: GestureDetector(
+        key: const Key('explore-avatar'),
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.secondary,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: AppShadows.card,
+            image: hasPhoto
+                ? DecorationImage(
+                    image: CachedNetworkImageProvider(url), fit: BoxFit.cover)
+                : null,
+          ),
+          child: hasPhoto
+              ? null
+              : const Icon(Icons.person, size: 20, color: Colors.white),
+        ),
+      ),
+    );
   }
 }
 
@@ -688,7 +800,7 @@ class _FilterChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: active ? AppColors.primary : Colors.white,
+          color: active ? AppColors.onSurface : Colors.white,
           borderRadius: BorderRadius.circular(18),
           border: active ? null : Border.all(color: AppColors.border),
           boxShadow: [
