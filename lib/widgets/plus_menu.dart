@@ -6,14 +6,22 @@ enum _PlusAction { publish, suggest }
 
 /// Menú del botón ＋ de la barra: fondo oscurecido, dos opciones apiladas
 /// sobre el botón central, que se vuelve ×.
-Future<void> showPlusMenu(BuildContext context) async {
+///
+/// [anchor] es el contexto del botón ＋ de la barra: el × se dibuja en su
+/// centro real. Sin él se usa una fórmula aproximada (ver [_PlusMenu]).
+Future<void> showPlusMenu(BuildContext context, {BuildContext? anchor}) async {
+  Offset? center;
+  final box = anchor?.findRenderObject();
+  if (box is RenderBox && box.hasSize) {
+    center = box.localToGlobal(box.size.center(Offset.zero));
+  }
   final action = await showGeneralDialog<_PlusAction>(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Cerrar menú',
     barrierColor: AppColors.onSurface.withValues(alpha: 0.35),
     transitionDuration: const Duration(milliseconds: 180),
-    pageBuilder: (_, __, ___) => const _PlusMenu(),
+    pageBuilder: (_, __, ___) => _PlusMenu(center: center),
     transitionBuilder: (_, animation, __, child) =>
         FadeTransition(opacity: animation, child: child),
   );
@@ -35,56 +43,59 @@ void showPublishNowSheet(BuildContext context) {
 }
 
 class _PlusMenu extends StatelessWidget {
-  const _PlusMenu();
+  /// Centro del ＋ en coordenadas de pantalla; null si no se pudo medir.
+  final Offset? center;
+  const _PlusMenu({this.center});
 
-  // El centro del botón de la barra queda a medio FAB (28) sobre el borde
-  // inferior de la barra segura, así que el × se dibuja en el mismo lugar.
   static const _fabSize = 56.0;
+  static const _menuWidth = 240.0;
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.paddingOf(context).bottom + _fabSize / 2;
     return Material(
       type: MaterialType.transparency,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => Navigator.of(context).pop(),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: bottom + _fabSize + 16,
-            child: Center(
-              child: SizedBox(
-                width: 240,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _PlusMenuItem(
-                      icon: Icons.bolt_rounded,
-                      label: 'Publicar lo que pasa aquí',
-                      onTap: () => Navigator.of(context).pop(_PlusAction.publish),
-                    ),
-                    const SizedBox(height: 8),
-                    _PlusMenuItem(
-                      icon: Icons.add_location_alt_outlined,
-                      label: 'Sugerir un lugar nuevo',
-                      onTap: () => Navigator.of(context).pop(_PlusAction.suggest),
-                    ),
-                  ],
-                ),
+      // ponytail: asume que el diálogo ocupa la pantalla entera (así es en la
+      // app); con un Navigator anidado o recortado habría que convertir el centro.
+      child: LayoutBuilder(builder: (context, box) {
+        // Sin ancla: a medio FAB sobre el borde inferior seguro.
+        final c = center ??
+            Offset(
+                box.maxWidth / 2,
+                box.maxHeight -
+                    MediaQuery.paddingOf(context).bottom -
+                    _fabSize / 2);
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => Navigator.of(context).pop(),
               ),
             ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: bottom,
-            child: Center(
+            Positioned(
+              left: c.dx - _menuWidth / 2,
+              width: _menuWidth,
+              bottom: box.maxHeight - (c.dy - _fabSize / 2) + 16,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _PlusMenuItem(
+                    icon: Icons.bolt_rounded,
+                    label: 'Publicar lo que pasa aquí',
+                    onTap: () => Navigator.of(context).pop(_PlusAction.publish),
+                  ),
+                  const SizedBox(height: 8),
+                  _PlusMenuItem(
+                    icon: Icons.add_location_alt_outlined,
+                    label: 'Sugerir un lugar nuevo',
+                    onTap: () => Navigator.of(context).pop(_PlusAction.suggest),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              left: c.dx - _fabSize / 2,
+              top: c.dy - _fabSize / 2,
               child: FloatingActionButton(
                 heroTag: null,
                 tooltip: 'Cerrar',
@@ -96,9 +107,9 @@ class _PlusMenu extends StatelessWidget {
                     color: Colors.white, size: 32),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      }),
     );
   }
 }

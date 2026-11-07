@@ -32,14 +32,17 @@ class _MainShellState extends State<MainShell> {
       body: KeyedSubtree(
           key: ValueKey('${context.watch<AuthProvider>().user?.id}-$_index'),
           child: _screens[_index]),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'newPlace',
-        tooltip: 'Añadir',
-        backgroundColor: AppColors.primary,
-        elevation: 4,
-        shape: const CircleBorder(),
-        onPressed: () => showPlusMenu(context),
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
+      floatingActionButton: Builder(
+        // fabContext: el menú lee de aquí dónde quedó el botón de verdad.
+        builder: (fabContext) => FloatingActionButton(
+          heroTag: 'newPlace',
+          tooltip: 'Añadir',
+          backgroundColor: AppColors.primary,
+          elevation: 4,
+          shape: const CircleBorder(),
+          onPressed: () => showPlusMenu(context, anchor: fabContext),
+          child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
@@ -117,14 +120,18 @@ class _NavItem extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(selected ? selectedIcon : icon, color: color),
-              Text(label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontSize: 10,
-                      color: color,
-                      fontWeight:
-                          selected ? FontWeight.w700 : FontWeight.w500)),
+              // Etiqueta de 10 px: con texto muy grande no cabría en 56 px.
+              MediaQuery.withClampedTextScaling(
+                maxScaleFactor: 1.2,
+                child: Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 10,
+                        color: color,
+                        fontWeight:
+                            selected ? FontWeight.w700 : FontWeight.w500)),
+              ),
             ],
           ),
         ),

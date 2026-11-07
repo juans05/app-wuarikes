@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wuarikes_app/core/api_client.dart';
 import 'package:wuarikes_app/core/models.dart';
+import 'package:wuarikes_app/screens/explore_screen.dart';
 import 'package:wuarikes_app/screens/favorites_screen.dart';
 import 'package:wuarikes_app/screens/feed_screen.dart';
 import 'package:wuarikes_app/screens/main_shell.dart';
@@ -33,11 +34,19 @@ void _ignoreOverflow() {
   addTearDown(() => FlutterError.onError = onError);
 }
 
-Future<void> _pump(WidgetTester tester, Widget home, AuthProvider auth) async {
+Future<void> _pump(WidgetTester tester, Widget home, AuthProvider auth,
+    {double bottomInsetPx = 0}) async {
   // Tamaño de celular: el de prueba por defecto (800x600) desborda Explorar.
   tester.view.physicalSize = const Size(1080, 2340);
   tester.view.devicePixelRatio = 3;
+  if (bottomInsetPx > 0) {
+    // Barra de gestos / navegación del sistema abajo.
+    tester.view.padding = FakeViewPadding(bottom: bottomInsetPx);
+    tester.view.viewPadding = FakeViewPadding(bottom: bottomInsetPx);
+  }
   addTearDown(tester.view.reset);
+  addTearDown(tester.view.resetPadding);
+  addTearDown(tester.view.resetViewPadding);
   await tester.pumpWidget(ChangeNotifierProvider<AuthProvider>.value(
     value: auth,
     child: MaterialApp(home: home),
@@ -62,6 +71,20 @@ void main() {
   testWidgets('las pestañas abren Actividad, Premios y Perfil en ese orden',
       (tester) async {
     await _pump(tester, const MainShell(), _auth());
+
+    expect(find.byType(ExploreScreen), findsOneWidget); // pestaña inicial
+
+    double x(Finder f) => tester.getCenter(f).dx;
+    final xs = [
+      x(find.text('Explorar')),
+      x(find.text('Actividad')),
+      x(find.byIcon(Icons.add_rounded)),
+      x(find.text('Premios')),
+      x(find.text('Perfil')),
+    ];
+    expect(xs, orderedEquals([...xs]..sort()),
+        reason: 'Explorar < Actividad < ＋ < Premios < Perfil');
+    expect(xs.toSet().length, 5);
 
     await tester.tap(find.text('Actividad'));
     await tester.pump();
@@ -98,6 +121,47 @@ void main() {
     await tester.tapAt(const Offset(10, 10));
     await tester.pumpAndSettle();
     expect(find.text('Sugerir un lugar nuevo'), findsNothing);
+  });
+
+  testWidgets('con barra de gestos el × queda sobre el ＋ y las opciones arriba',
+      (tester) async {
+    // 102 px físicos = 34 px lógicos de inset inferior.
+    await _pump(tester, const MainShell(), _auth(), bottomInsetPx: 102);
+
+    final plusCenter = tester.getCenter(find.byIcon(Icons.add_rounded));
+    await tester.tap(find.byIcon(Icons.add_rounded));
+    await tester.pumpAndSettle();
+
+    final closeCenter = tester.getCenter(find.byIcon(Icons.close_rounded));
+    expect(closeCenter, plusCenter);
+    // Las opciones quedan por encima del botón (su borde superior: -28).
+    expect(tester.getBottomLeft(find.text('Sugerir un lugar nuevo')).dy,
+        lessThan(closeCenter.dy - 28));
+  });
+
+  testWidgets('el menú se cierra con el × y con atrás, y el shell se queda',
+      (tester) async {
+    await _pump(tester, const MainShell(), _auth());
+
+    // Con el ×.
+    await tester.tap(find.byIcon(Icons.add_rounded));
+    await tester.pumpAndSettle();
+    expect(find.text('Sugerir un lugar nuevo'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.pumpAndSettle();
+    expect(find.text('Sugerir un lugar nuevo'), findsNothing);
+    expect(find.byType(MainShell), findsOneWidget);
+    expect(find.byType(RegisterPlaceScreen), findsNothing);
+
+    // Con el botón atrás del sistema.
+    await tester.tap(find.byIcon(Icons.add_rounded));
+    await tester.pumpAndSettle();
+    expect(find.text('Sugerir un lugar nuevo'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Sugerir un lugar nuevo'), findsNothing);
+    expect(find.byType(MainShell), findsOneWidget);
+    expect(find.byType(RegisterPlaceScreen), findsNothing);
   });
 
   testWidgets('"Sugerir un lugar nuevo" abre RegisterPlaceScreen',

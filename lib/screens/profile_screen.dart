@@ -489,7 +489,7 @@ class _ProfileLinkRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppColors.surfaceContainerLowest,
       shape: RoundedRectangleBorder(
           side: const BorderSide(color: AppColors.border),
           borderRadius: BorderRadius.circular(12)),
