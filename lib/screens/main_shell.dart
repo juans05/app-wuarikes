@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/auth_provider.dart';
 import '../core/app_theme.dart';
+import '../widgets/plus_menu.dart';
 import 'explore_screen.dart';
-import 'favorites_screen.dart';
 import 'feed_screen.dart';
+import 'my_loyalty_screen.dart';
 import 'profile_screen.dart';
-import 'register_place_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -20,8 +20,8 @@ class _MainShellState extends State<MainShell> {
 
   static const _screens = [
     ExploreScreen(),
-    FavoritesScreen(),
     FeedScreen(),
+    MyLoyaltyScreen(),
     ProfileScreen(),
   ];
 
@@ -34,12 +34,11 @@ class _MainShellState extends State<MainShell> {
           child: _screens[_index]),
       floatingActionButton: FloatingActionButton(
         heroTag: 'newPlace',
+        tooltip: 'Añadir',
         backgroundColor: AppColors.primary,
         elevation: 4,
         shape: const CircleBorder(),
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const RegisterPlaceScreen()),
-        ),
+        onPressed: () => showPlusMenu(context),
         child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -52,7 +51,6 @@ class _MainShellState extends State<MainShell> {
         child: SafeArea(
           top: false,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _NavItem(
                 icon: Icons.explore_outlined,
@@ -62,17 +60,17 @@ class _MainShellState extends State<MainShell> {
                 onTap: () => setState(() => _index = 0),
               ),
               _NavItem(
-                icon: Icons.favorite_border_rounded,
-                selectedIcon: Icons.favorite_rounded,
-                label: 'Favoritos',
+                icon: Icons.dynamic_feed_outlined,
+                selectedIcon: Icons.dynamic_feed,
+                label: 'Actividad',
                 selected: _index == 1,
                 onTap: () => setState(() => _index = 1),
               ),
               const SizedBox(width: 56), // reserved for the notch/FAB
               _NavItem(
-                icon: Icons.dynamic_feed_outlined,
-                selectedIcon: Icons.dynamic_feed,
-                label: 'Actividad',
+                icon: Icons.loyalty_outlined,
+                selectedIcon: Icons.loyalty,
+                label: 'Premios',
                 selected: _index == 2,
                 onTap: () => setState(() => _index = 2),
               ),
@@ -109,14 +107,26 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = selected ? AppColors.primary : AppColors.onSurfaceVariant;
-    return Tooltip(
-      message: label,
+    return Expanded(
       child: InkWell(
         onTap: onTap,
-        customBorder: const CircleBorder(),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Icon(selected ? selectedIcon : icon, color: color),
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(selected ? selectedIcon : icon, color: color),
+              Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 10,
+                      color: color,
+                      fontWeight:
+                          selected ? FontWeight.w700 : FontWeight.w500)),
+            ],
+          ),
         ),
       ),
     );

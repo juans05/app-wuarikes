@@ -10,6 +10,7 @@ import '../core/marker_builder.dart';
 import '../core/models.dart';
 import '../state/auth_provider.dart';
 import 'edit_account_screen.dart';
+import 'favorites_screen.dart';
 import 'settings_screen.dart';
 import 'social_screen.dart';
 import 'feed_screen.dart';
@@ -300,6 +301,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   label: 'Check-ins',
                   value: '${_stats?.checkinsCount ?? _checkins.length}'),
             ]),
+            const SizedBox(height: 12),
+            _ProfileLinkRow(
+              icon: Icons.favorite_border_rounded,
+              label: 'Guardados',
+              onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const FavoritesScreen())),
+            ),
             const SizedBox(height: 22),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Text('Insignias', style: AppText.titleLg),
@@ -466,6 +474,35 @@ class _FollowStat extends StatelessWidget {
                   color: AppColors.onSurface, fontWeight: FontWeight.w700)),
           TextSpan(text: label, style: AppText.bodyMd),
         ])),
+      ),
+    );
+  }
+}
+
+class _ProfileLinkRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _ProfileLinkRow(
+      {required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+          side: const BorderSide(color: AppColors.border),
+          borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        onTap: onTap,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        leading: Icon(icon, color: AppColors.primary),
+        title: Text(label,
+            style: AppText.bodyMd.copyWith(
+                color: AppColors.onSurface, fontWeight: FontWeight.w600)),
+        trailing: const Icon(Icons.chevron_right_rounded,
+            color: AppColors.onSurfaceVariant),
       ),
     );
   }
