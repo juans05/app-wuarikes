@@ -14,6 +14,11 @@ class ExploreBottomList extends StatelessWidget {
   /// Los locales ya vienen filtrados por "abierto ahora": se marcan "Abierto".
   final bool openNow;
 
+  /// Hay una carga en vuelo / la última carga falló. Solo cambian el texto de
+  /// la lista cuando no hay locales que mostrar.
+  final bool loading;
+  final bool failed;
+
   /// Metros desde el usuario hasta el local; null si no se sabe.
   final double? Function(Place place)? distanceMeters;
 
@@ -21,6 +26,8 @@ class ExploreBottomList extends StatelessWidget {
   final ValueChanged<double>? onExtentChanged;
 
   static const initialExtent = 0.35;
+  static const _sheetRadius =
+      BorderRadius.vertical(top: Radius.circular(AppRadius.lg));
 
   const ExploreBottomList({
     super.key,
@@ -28,6 +35,8 @@ class ExploreBottomList extends StatelessWidget {
     required this.onPlaceTap,
     required this.onSurprise,
     this.openNow = false,
+    this.loading = false,
+    this.failed = false,
     this.distanceMeters,
     this.onExtentChanged,
   });
@@ -42,14 +51,14 @@ class ExploreBottomList extends StatelessWidget {
       child: DraggableScrollableSheet(
         initialChildSize: initialExtent,
         minChildSize: 0.12,
-        maxChildSize: 0.72,
+        maxChildSize: 0.6,
         snap: true,
         snapSizes: const [initialExtent],
+        // La sombra va en un Container y el fondo en un Material, para que
+        // las ondas de las tarjetas (InkWell) se vean sobre el fondo blanco.
         builder: (context, scrollController) => Container(
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+            borderRadius: _sheetRadius,
             boxShadow: [
               BoxShadow(
                   color: Colors.black.withValues(alpha: 0.10),
@@ -57,37 +66,50 @@ class ExploreBottomList extends StatelessWidget {
                   offset: const Offset(0, -8))
             ],
           ),
-          child: CustomScrollView(
-            controller: scrollController,
-            slivers: [
-              SliverToBoxAdapter(child: _Header(
-                  count: places.length, onSurprise: onSurprise)),
-              if (places.isEmpty)
+          child: Material(
+            color: AppColors.surfaceContainerLowest,
+            borderRadius: _sheetRadius,
+            clipBehavior: Clip.antiAlias,
+            child: CustomScrollView(
+              controller: scrollController,
+              slivers: [
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text('No hay locales para mostrar por ahora.',
-                        textAlign: TextAlign.center, style: AppText.bodyMd),
+                    child:
+                        _Header(count: places.length, onSurprise: onSurprise)),
+                if (places.isEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                          loading
+                              ? 'Cargando…'
+                              : failed
+                                  ? 'No pudimos cargar los locales'
+                                  : 'No hay locales para mostrar por ahora.',
+                          textAlign: TextAlign.center,
+                          style: AppText.bodyMd),
+                    ),
+                  ),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  sliver: SliverList.builder(
+                    itemCount: places.length,
+                    itemBuilder: (_, i) {
+                      final place = places[i];
+                      return PlaceListTile(
+                        key: ValueKey('place-tile-${place.id}'),
+                        place: place,
+                        isOpen: openNow,
+                        distanceMeters: distanceMeters?.call(place),
+                        onTap: () => onPlaceTap(place),
+                      );
+                    },
                   ),
                 ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                sliver: SliverList.builder(
-                  itemCount: places.length,
-                  itemBuilder: (_, i) {
-                    final place = places[i];
-                    return PlaceListTile(
-                      key: ValueKey('place-tile-${place.id}'),
-                      place: place,
-                      isOpen: openNow,
-                      distanceMeters: distanceMeters?.call(place),
-                      onTap: () => onPlaceTap(place),
-                    );
-                  },
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 16)),
-            ],
+                // Espacio para que la última tarjeta no quede bajo el botón ＋.
+                const SliverToBoxAdapter(child: SizedBox(height: 72)),
+              ],
+            ),
           ),
         ),
       ),

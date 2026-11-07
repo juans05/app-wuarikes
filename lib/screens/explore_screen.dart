@@ -56,6 +56,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
       ValueNotifier(ExploreBottomList.initialExtent);
 
   List<Place> _places = [];
+
+  /// Con qué filtro "abierto ahora" se pidió [_places]. La etiqueta "Abierto"
+  /// de la lista depende de esto y no del chip, que cambia antes de que llegue
+  /// la respuesta.
+  bool _placesOpenOnly = false;
+
+  /// Cuántas cargas de [_places] están en vuelo, y si la última falló.
+  int _loadsInFlight = 0;
+  bool _loadFailed = false;
+  bool get _loading => _loadsInFlight > 0;
   List<Category> _categories = [];
   List<Amenity> _amenities = [];
   String? _activeCategory;
@@ -201,6 +211,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   Future<void> _loadPlaces() async {
+    final open = _openNow;
+    setState(() => _loadsInFlight++);
     try {
       final result = await _api.getPlaces(
         category: _activeCategory,
@@ -211,13 +223,24 @@ class _ExploreScreenState extends State<ExploreScreen> {
         priceMax: _priceMax,
         minRating: _minRating,
         amenities: _amenitySlugs.isEmpty ? null : _amenitySlugs.toList(),
-        openNow: _openNow,
+        openNow: open,
       );
       if (!mounted) return;
-      setState(() => _places = result.data);
+      setState(() {
+        _places = result.data;
+        _placesOpenOnly = open;
+        _loadFailed = false;
+      });
       _buildMarkers();
     } catch (_) {
-      if (mounted) setState(() => _places = []);
+      if (mounted) {
+        setState(() {
+          _places = [];
+          _loadFailed = true;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _loadsInFlight--);
     }
   }
 
@@ -316,8 +339,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   void _openPlaceDetail(Place place) {
-    Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => PlaceDetailScreen(placeId: place.id)));
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => PlaceDetailScreen(placeId: place.id)));
   }
 
   void _openDiscovery() {
@@ -381,7 +404,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
             Positioned.fill(
               child: ExploreBottomList(
                 places: _places,
-                openNow: _openNow,
+                openNow: _placesOpenOnly,
+                loading: _loading,
+                failed: _loadFailed,
                 distanceMeters: _distanceTo,
                 onPlaceTap: _openPlaceDetail,
                 onSurprise: _openDiscovery,

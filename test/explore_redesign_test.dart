@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -52,6 +53,47 @@ ApiClient _mockApi(List<Map<String, dynamic>> places,
     return http.Response(jsonEncode(body), 200,
         headers: {'content-type': 'application/json; charset=utf-8'});
   }));
+}
+
+/// Como [_mockApi], pero cada petición a `/places` espera a [release] antes de
+/// responder: la primera devuelve [first]; las demás [second] (o 500 si falla).
+class _GatedApi {
+  final _gates = <Completer<void>>[];
+  final seen = <http.Request>[];
+  final List<Map<String, dynamic>> first;
+  final List<Map<String, dynamic>> second;
+  final bool failSecond;
+  _GatedApi(this.first, {this.second = const [], this.failSecond = false});
+
+  /// Una por cada petición a `/places`, en orden.
+  int get pending => _gates.length;
+
+  late final api = ApiClient(
+      client: MockClient((req) async {
+    seen.add(req);
+    if (!req.url.path.endsWith('/places')) {
+      return http.Response('[]', 200);
+    }
+    final index = _gates.length;
+    final gate = Completer<void>();
+    _gates.add(gate);
+    await gate.future;
+    if (index > 0 && failSecond) return http.Response('{}', 500);
+    final data = index == 0 ? first : second;
+    return http.Response(
+        jsonEncode({
+          'data': data,
+          'meta': {'total': data.length, 'page': 1, 'totalPages': 1}
+        }),
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'});
+  }));
+
+  Future<void> release(WidgetTester tester, int index) async {
+    _gates[index].complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+  }
 }
 
 Future<void> _pump(WidgetTester tester, Widget home) async {
@@ -202,6 +244,37 @@ void main() {
       expect(find.text('Abierto'), findsNWidgets(3));
     });
 
+    testWidgets('mientras carga y sin locales dice "Cargando…", no "No hay"',
+        (tester) async {
+      tester.view.physicalSize = const Size(1080, 2340);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      Future<void> pumpState({bool loading = false, bool failed = false}) =>
+          tester.pumpWidget(MaterialApp(
+            home: Scaffold(
+              body: ExploreBottomList(
+                places: const [],
+                loading: loading,
+                failed: failed,
+                onPlaceTap: (_) {},
+                onSurprise: () {},
+              ),
+            ),
+          ));
+
+      await pumpState(loading: true);
+      expect(find.text('Cargando…'), findsOneWidget);
+      expect(find.textContaining('No hay locales'), findsNothing);
+
+      await pumpState(failed: true);
+      expect(find.text('No pudimos cargar los locales'), findsOneWidget);
+      expect(find.text('Cargando…'), findsNothing);
+
+      await pumpState();
+      expect(find.text('No hay locales para mostrar por ahora.'),
+          findsOneWidget);
+    });
+
     testWidgets('sin precio ni categoría esas partes no se inventan',
         (tester) async {
       await pumpList(tester, places: [
@@ -278,6 +351,61 @@ void main() {
       expect(places, hasLength(1));
       expect(places.single.url.queryParameters['openNow'], 'true');
       expect(find.text('Abierto'), findsNWidgets(2));
+    });
+
+    testWidgets(
+        'al activar "Abierto ahora" la lista vieja no dice "Abierto" hasta que llega la respuesta',
+        (tester) async {
+      final gated = _GatedApi([
+        _placeJson('p1', 'El Chinito'),
+        _placeJson('p2', 'Don Lucho'),
+      ], second: [
+        _placeJson('p1', 'El Chinito'),
+      ]);
+      await _pump(tester, ExploreScreen(api: gated.api));
+      await gated.release(tester, 0);
+      expect(find.text('Cerca de ti · 2'), findsOneWidget);
+
+      await _scrollChipsToEnd(tester);
+      await tester.tap(find.text('Abierto ahora'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // La petición con openNow sigue pendiente: lista vieja, sin etiqueta.
+      expect(gated.pending, 2);
+      expect(find.text('Cerca de ti · 2'), findsOneWidget);
+      expect(find.text('Abierto'), findsNothing);
+
+      await gated.release(tester, 1);
+      expect(find.text('Cerca de ti · 1'), findsOneWidget);
+      expect(find.text('Abierto'), findsOneWidget);
+    });
+
+    testWidgets('texto de la lista vacía: "Cargando…" y luego el fallo',
+        (tester) async {
+      final gated =
+          _GatedApi([_placeJson('p1', 'El Chinito')], failSecond: true);
+      await _pump(tester, ExploreScreen(api: gated.api));
+
+      // Primera carga en vuelo.
+      expect(find.text('Cargando…'), findsOneWidget);
+      expect(find.textContaining('No hay locales'), findsNothing);
+      await gated.release(tester, 0);
+      expect(find.text('Cargando…'), findsNothing);
+      expect(find.text('El Chinito'), findsOneWidget);
+
+      // Segunda carga (filtro) que falla: la lista queda vacía con el aviso.
+      await _scrollChipsToEnd(tester);
+      await tester.tap(find.text('Abierto ahora'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('El Chinito'), findsOneWidget); // todavía la vieja
+      await gated.release(tester, 1);
+
+      expect(find.text('No pudimos cargar los locales'), findsOneWidget);
+      expect(find.text('Cargando…'), findsNothing);
+      expect(find.textContaining('No hay locales'), findsNothing);
+      expect(find.text('Cerca de ti · 0'), findsOneWidget);
     });
 
     testWidgets('tocar una tarjeta abre la ficha del local', (tester) async {
