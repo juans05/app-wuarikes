@@ -29,6 +29,10 @@ class NowPost {
   /// 'like' | 'dislike' | 'check' | null (sin reacción o sin sesión)
   final String? myReaction;
 
+  /// Ocultada por reportes o votos. Solo viene en `GET /now/mine`; en el resto
+  /// de respuestas falta y vale false.
+  final bool hidden;
+
   NowPost({
     required this.id,
     required this.kind,
@@ -46,6 +50,7 @@ class NowPost {
     required this.authorName,
     this.authorAvatar,
     this.myReaction,
+    this.hidden = false,
   });
 
   factory NowPost.fromJson(Map<String, dynamic> json) {
@@ -67,6 +72,7 @@ class NowPost {
       authorName: author['fullName'] as String? ?? '',
       authorAvatar: author['avatarUrl'] as String?,
       myReaction: json['myReaction'] as String?,
+      hidden: json['hidden'] == true,
     );
   }
 
@@ -131,6 +137,10 @@ class NowArea {
             .toList(),
       );
 }
+
+/// Aviso cuando la posición viene de una app de ubicación falsa.
+const nowMockedLocationMessage =
+    'Desactiva la ubicación simulada para continuar';
 
 /// "Cerca" de Ahora: radio en metros para dar ✅ (el backend aplica el mismo).
 const nowRadiusMeters = 300;

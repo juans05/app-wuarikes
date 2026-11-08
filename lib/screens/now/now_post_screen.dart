@@ -116,6 +116,10 @@ class _NowPostScreenState extends State<NowPostScreen> {
         final fresh = await _locator();
         if (!mounted) return;
         setState(() => _position = fresh);
+        if (fresh != null && fresh.isMocked) {
+          _snack(nowMockedLocationMessage);
+          return;
+        }
         final d = _distance(post);
         if (d == null || !canConfirm(d)) {
           _snack('Acércate para confirmar');

@@ -60,6 +60,12 @@ void main() {
     expect(p.authorAvatar, isNull);
   });
 
+  test('NowPost.fromJson: hidden solo es true si el backend lo manda true', () {
+    expect(NowPost.fromJson(postJson()).hidden, isFalse);
+    expect(NowPost.fromJson(postJson(extra: {'hidden': false})).hidden, isFalse);
+    expect(NowPost.fromJson(postJson(extra: {'hidden': true})).hidden, isTrue);
+  });
+
   test('NowPost.fromJson acepta números como texto', () {
     final p = NowPost.fromJson(postJson(extra: {
       'latitude': '-12.046',

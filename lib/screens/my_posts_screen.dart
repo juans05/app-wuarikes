@@ -104,10 +104,17 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
                         for (final p in _posts) ...[
                           _PostRow(
                               post: p,
-                              onTap: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) => NowPostScreen(
-                                          postId: p.id, api: widget.api)))),
+                              // Oculta: el detalle daría 404, así que se explica.
+                              onTap: p.hidden
+                                  ? () => ScaffoldMessenger.of(context)
+                                    ..hideCurrentSnackBar()
+                                    ..showSnackBar(const SnackBar(
+                                        content: Text(
+                                            'Esta publicación fue ocultada por reportes o votos')))
+                                  : () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                          builder: (_) => NowPostScreen(
+                                              postId: p.id, api: widget.api)))),
                           const SizedBox(height: 8),
                         ],
                         if (_page < _totalPages)
@@ -148,8 +155,7 @@ class _PostRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         onTap: onTap,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         leading: Icon(icon, color: AppColors.primary),
         title: Text(text.isEmpty ? fallback : text,
             maxLines: 2,
@@ -159,8 +165,21 @@ class _PostRow extends StatelessWidget {
         subtitle: Text(
             '${_visibilityLabels[post.visibility] ?? post.visibility} · ⚡ ${timeLeftLabel(post.timeLeft(DateTime.now()))}',
             style: AppText.labelMd),
-        trailing: const Icon(Icons.chevron_right_rounded,
-            color: AppColors.onSurfaceVariant),
+        trailing: post.hidden
+            ? Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text('Oculta',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary)),
+              )
+            : const Icon(Icons.chevron_right_rounded,
+                color: AppColors.onSurfaceVariant),
       ),
     );
   }

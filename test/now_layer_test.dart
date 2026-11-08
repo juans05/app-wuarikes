@@ -90,10 +90,11 @@ http.Response _ok(Object body, [int status = 200]) =>
 http.Response _err(int status, String message) =>
     http.Response(jsonEncode({'message': message}), status, headers: _json);
 
-Position _at(double lat, double lng) => Position(
+Position _at(double lat, double lng, {bool mocked = false}) => Position(
       latitude: lat,
       longitude: lng,
       timestamp: DateTime(2026, 11, 7),
+      isMocked: mocked,
       accuracy: 5,
       altitude: 0,
       altitudeAccuracy: 0,
@@ -294,6 +295,20 @@ void main() {
       });
       expect(find.text('✅ 3'), findsOneWidget);
       expect(find.text('Acércate para confirmar'), findsNothing);
+    });
+
+    testWidgets('✅ con ubicación simulada: avisa y no se manda', (tester) async {
+      final fake = _FakeNow();
+      await _pumpPost(tester, fake,
+          position: _at(_centerLat + 0.001, _centerLng, mocked: true));
+
+      await tester.tap(find.text('✅ 2'));
+      await _settle(tester);
+
+      expect(find.text('Desactiva la ubicación simulada para continuar'),
+          findsOneWidget);
+      expect(fake.where('PUT', '/reaction'), isEmpty);
+      expect(find.text('✅ 2'), findsOneWidget);
     });
 
     testWidgets('✅ cerca al abrir pero lejos al tocar: no se manda',
@@ -670,6 +685,89 @@ void main() {
       expect(find.text('Activa tu ubicación para publicar'), findsOneWidget);
       expect(seen, isEmpty);
       expect(find.text('¿Qué está pasando?'), findsOneWidget);
+    });
+
+    testWidgets('con ubicación simulada no publica y lo dice', (tester) async {
+      final seen = <http.Request>[];
+      await pumpSheet(tester, api: ApiClient(client: MockClient((r) async {
+        seen.add(r);
+        return _ok(_postJson('nuevo'), 201);
+      })), position: _at(_centerLat, _centerLng, mocked: true));
+
+      await tester.tap(find.text('✏️ Texto'));
+      await tester.pump();
+      await tester.enterText(find.byKey(const Key('now-text')), 'Hay cola');
+      await tester.tap(find.byKey(const Key('publish-button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Desactiva la ubicación simulada para continuar'),
+          findsOneWidget);
+      expect(seen, isEmpty);
+      expect(find.text('¿Qué está pasando?'), findsOneWidget);
+    });
+
+    testWidgets('doble toque en Publicar llama a la API una sola vez',
+        (tester) async {
+      final seen = <http.Request>[];
+      final reply = Completer<http.Response>();
+      await pumpSheet(tester, api: ApiClient(client: MockClient((r) {
+        seen.add(r);
+        return reply.future;
+      })), position: here);
+
+      await tester.tap(find.text('✏️ Texto'));
+      await tester.pump();
+      await tester.enterText(find.byKey(const Key('now-text')), 'Hay cola');
+      // Dos toques seguidos, sin cuadro entre ellos: el botón aún no se apagó.
+      await tester.tap(find.byKey(const Key('publish-button')));
+      await tester.tap(find.byKey(const Key('publish-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(seen, hasLength(1));
+
+      reply.complete(_ok(_postJson('nuevo'), 201));
+      await tester.pumpAndSettle();
+      expect(seen, hasLength(1));
+      expect(nowPostPublished.value?.id, 'nuevo');
+    });
+
+    testWidgets('mientras publica, el botón atrás no cierra la hoja',
+        (tester) async {
+      final reply = Completer<http.Response>();
+      await pumpSheet(tester, api: ApiClient(client: MockClient((r) {
+        return reply.future;
+      })), position: here);
+
+      await tester.tap(find.text('✏️ Texto'));
+      await tester.pump();
+      await tester.enterText(find.byKey(const Key('now-text')), 'Hay cola');
+      await tester.tap(find.byKey(const Key('publish-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // Con la ruedita girando no hay "settle": se deja correr la animación.
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('¿Qué está pasando?'), findsOneWidget);
+
+      // Al terminar de publicar, la hoja se cierra sola.
+      reply.complete(_ok(_postJson('nuevo'), 201));
+      await tester.pumpAndSettle();
+      expect(find.text('¿Qué está pasando?'), findsNothing);
+      expect(find.text('Publicado. Dura 24 h.'), findsOneWidget);
+    });
+
+    testWidgets('sin publicar, el botón atrás sí cierra la hoja',
+        (tester) async {
+      await pumpSheet(tester,
+          api: ApiClient(client: MockClient((r) async => _ok({}))),
+          position: here);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('¿Qué está pasando?'), findsNothing);
     });
 
     testWidgets('cambiar de Foto a Video suelta el archivo elegido',

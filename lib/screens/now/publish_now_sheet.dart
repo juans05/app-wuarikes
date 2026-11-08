@@ -179,6 +179,7 @@ class _PublishSheetState extends State<_PublishSheet> {
   }
 
   Future<void> _publish() async {
+    if (_busy) return;
     final text = _text.text.trim();
     final String? problem;
     if (_kind == 'text' && text.isEmpty) {
@@ -210,6 +211,10 @@ class _PublishSheetState extends State<_PublishSheet> {
         setState(() => _error = 'Activa tu ubicación para publicar');
         return;
       }
+      if (here.isMocked) {
+        setState(() => _error = nowMockedLocationMessage);
+        return;
+      }
       final post = await widget.api.createNowPost(
         kind: _kind,
         text: text,
@@ -220,7 +225,7 @@ class _PublishSheetState extends State<_PublishSheet> {
         filename: _fileName.isEmpty ? null : _fileName,
         mimeType: _fileMime,
       );
-      navigator.pop();
+      if (mounted) navigator.pop();
       messenger
           .showSnackBar(const SnackBar(content: Text('Publicado. Dura 24 h.')));
       nowPostPublished.value = post;
@@ -235,119 +240,125 @@ class _PublishSheetState extends State<_PublishSheet> {
   Widget build(BuildContext context) {
     final name = context.watch<AuthProvider>().user?.fullName ?? '';
     final media = _kind != 'text';
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                      color: AppColors.border,
-                      borderRadius: BorderRadius.circular(4))),
-            ),
-            const SizedBox(height: 12),
-            Text('¿Qué está pasando?', style: AppText.titleLg),
-            const SizedBox(height: 10),
-            Row(children: [
-              _Option(
-                  key: const Key('kind-photo'),
-                  label: '📷 Foto',
-                  selected: _kind == 'photo',
-                  onTap: () => _setKind('photo')),
-              const SizedBox(width: 8),
-              _Option(
-                  key: const Key('kind-video'),
-                  label: '🎥 Video',
-                  selected: _kind == 'video',
-                  onTap: () => _setKind('video')),
-              const SizedBox(width: 8),
-              _Option(
-                  key: const Key('kind-text'),
-                  label: '✏️ Texto',
-                  selected: _kind == 'text',
-                  onTap: () => _setKind('text')),
-            ]),
-            if (media) ...[
+    // Mientras se publica la hoja no se cierra: si no, la publicación sale
+    // sin que el usuario vea el resultado ni un error.
+    return PopScope(
+      canPop: !_busy,
+      child: Padding(
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: AppColors.border,
+                        borderRadius: BorderRadius.circular(4))),
+              ),
+              const SizedBox(height: 12),
+              Text('¿Qué está pasando?', style: AppText.titleLg),
               const SizedBox(height: 10),
-              _MediaTile(
-                video: _kind == 'video',
-                bytes: _bytes,
-                fileName: _fileName,
-                onTap: _busy ? null : _chooseMedia,
+              Row(children: [
+                _Option(
+                    key: const Key('kind-photo'),
+                    label: '📷 Foto',
+                    selected: _kind == 'photo',
+                    onTap: () => _setKind('photo')),
+                const SizedBox(width: 8),
+                _Option(
+                    key: const Key('kind-video'),
+                    label: '🎥 Video',
+                    selected: _kind == 'video',
+                    onTap: () => _setKind('video')),
+                const SizedBox(width: 8),
+                _Option(
+                    key: const Key('kind-text'),
+                    label: '✏️ Texto',
+                    selected: _kind == 'text',
+                    onTap: () => _setKind('text')),
+              ]),
+              if (media) ...[
+                const SizedBox(height: 10),
+                _MediaTile(
+                  video: _kind == 'video',
+                  bytes: _bytes,
+                  fileName: _fileName,
+                  onTap: _busy ? null : _chooseMedia,
+                ),
+              ],
+              const SizedBox(height: 10),
+              TextField(
+                key: const Key('now-text'),
+                controller: _text,
+                maxLength: 500,
+                minLines: 2,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  counterText: '',
+                  hintText: media
+                      ? 'Cuéntalo en pocas palabras (opcional)'
+                      : '¿Alguien sabe qué evento hay en la plaza?',
+                ),
               ),
-            ],
-            const SizedBox(height: 10),
-            TextField(
-              key: const Key('now-text'),
-              controller: _text,
-              maxLength: 500,
-              minLines: 2,
-              maxLines: 4,
-              decoration: InputDecoration(
-                counterText: '',
-                hintText: media
-                    ? 'Cuéntalo en pocas palabras (opcional)'
-                    : '¿Alguien sabe qué evento hay en la plaza?',
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text('¿QUIÉN LO VE?',
-                style: AppText.labelMd.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 6),
-            Row(children: [
-              _Option(
-                  key: const Key('vis-all'),
-                  label: '🌎 Todos',
-                  selected: _visibility == 'all',
-                  onTap: () => setState(() => _visibility = 'all')),
-              const SizedBox(width: 8),
-              _Option(
-                  key: const Key('vis-followers'),
-                  label: '👤 Seguidores',
-                  selected: _visibility == 'followers',
-                  onTap: () => setState(() => _visibility = 'followers')),
-              const SizedBox(width: 8),
-              _Option(
-                  key: const Key('vis-friends'),
-                  label: '👥 Amigos',
-                  selected: _visibility == 'friends',
-                  onTap: () => setState(() => _visibility = 'friends')),
-            ]),
-            const SizedBox(height: 10),
-            _LocationNote(
-                locating: _locating,
-                located: _position != null,
-                onRetry: _locate),
-            if (_error != null) ...[
               const SizedBox(height: 8),
-              Text(_error!,
-                  key: const Key('publish-error'),
-                  style: AppText.bodyMd.copyWith(
-                      color: AppColors.primary, fontWeight: FontWeight.w600)),
-            ],
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                key: const Key('publish-button'),
-                onPressed: _busy ? null : _publish,
-                child: _busy
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : Text('Publicar como @$name',
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text('¿QUIÉN LO VE?',
+                  style: AppText.labelMd.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 6),
+              Row(children: [
+                _Option(
+                    key: const Key('vis-all'),
+                    label: '🌎 Todos',
+                    selected: _visibility == 'all',
+                    onTap: () => setState(() => _visibility = 'all')),
+                const SizedBox(width: 8),
+                _Option(
+                    key: const Key('vis-followers'),
+                    label: '👤 Seguidores',
+                    selected: _visibility == 'followers',
+                    onTap: () => setState(() => _visibility = 'followers')),
+                const SizedBox(width: 8),
+                _Option(
+                    key: const Key('vis-friends'),
+                    label: '👥 Amigos',
+                    selected: _visibility == 'friends',
+                    onTap: () => setState(() => _visibility = 'friends')),
+              ]),
+              const SizedBox(height: 10),
+              _LocationNote(
+                  locating: _locating,
+                  located: _position != null,
+                  onRetry: _locate),
+              if (_error != null) ...[
+                const SizedBox(height: 8),
+                Text(_error!,
+                    key: const Key('publish-error'),
+                    style: AppText.bodyMd.copyWith(
+                        color: AppColors.primary, fontWeight: FontWeight.w600)),
+              ],
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  key: const Key('publish-button'),
+                  onPressed: _busy ? null : _publish,
+                  child: _busy
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : Text('Publicar como @$name',
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

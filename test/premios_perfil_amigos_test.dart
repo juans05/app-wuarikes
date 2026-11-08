@@ -464,6 +464,42 @@ void main() {
           seen.where((r) => r.url.path.endsWith('/now/posts/post-1')), isNotEmpty);
     });
 
+    testWidgets('Mis publicaciones: una oculta dice "Oculta" y no abre el detalle',
+        (tester) async {
+      final asked = <http.Request>[];
+      final api = ApiClient(client: MockClient((req) async {
+        asked.add(req);
+        if (req.url.path.endsWith('/now/mine')) {
+          return _ok({
+            'data': [
+              {...post(), 'hidden': true},
+              {...post(), 'id': 'post-2', 'text': 'Sigue visible'},
+            ],
+            'total': 2,
+          });
+        }
+        return _ok(post());
+      }));
+      await _pump(tester, MyPostsScreen(api: api), _auth());
+
+      expect(find.text('Oculta'), findsOneWidget);
+
+      await tester.tap(find.text('Feria en el parque'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(NowPostScreen), findsNothing);
+      expect(find.text('Esta publicación fue ocultada por reportes o votos'),
+          findsOneWidget);
+      expect(asked.where((r) => r.url.path.contains('/now/posts/')), isEmpty);
+
+      // Las que no están ocultas siguen abriendo.
+      await tester.tap(find.text('Sigue visible'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(NowPostScreen), findsOneWidget);
+    });
+
     testWidgets('Mis publicaciones sin nada: mensaje', (tester) async {
       final api = ApiClient(
           client: MockClient((req) async => req.url.path.endsWith('/now/mine')
