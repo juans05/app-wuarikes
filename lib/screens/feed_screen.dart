@@ -1,63 +1,246 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart' show Position;
 import 'package:provider/provider.dart';
 import '../core/api_client.dart';
 import '../core/app_theme.dart';
 import '../core/models.dart';
+import '../core/now_api.dart';
+import '../core/now_location.dart';
+import '../core/now_models.dart';
 import '../state/auth_provider.dart';
 import '../core/external_actions.dart';
+import 'now/now_post_screen.dart';
 import 'place_detail_screen.dart';
 import 'social_screen.dart';
 import 'login_screen.dart';
 
+/// Una fila de Actividad: un check-in o una publicación de Ahora.
+sealed class FeedEntry {
+  /// Cuándo se hizo; con esto [mergeFeed] las ordena.
+  DateTime get at;
+}
+
+class CheckinEntry extends FeedEntry {
+  final CheckinItem item;
+  CheckinEntry(this.item)
+      : at = DateTime.tryParse(item.createdAt) ??
+            DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+  @override
+  final DateTime at;
+}
+
+class PostEntry extends FeedEntry {
+  final NowPost post;
+  PostEntry(this.post) : at = post.createdAt;
+  @override
+  final DateTime at;
+}
+
+/// Intercala check-ins y publicaciones de la más nueva a la más vieja. A igual
+/// fecha manda el orden de entrada (check-ins antes que publicaciones, cada
+/// lista como vino): `List.sort` no es estable, por eso el índice desempata.
+List<FeedEntry> mergeFeed(List<CheckinItem> checkins, List<NowPost> posts) {
+  final all = <FeedEntry>[
+    for (final c in checkins) CheckinEntry(c),
+    for (final p in posts) PostEntry(p),
+  ];
+  final order = List<int>.generate(all.length, (i) => i)
+    ..sort((a, b) {
+      final byDate = all[b].at.compareTo(all[a].at);
+      return byDate != 0 ? byDate : a.compareTo(b);
+    });
+  return [for (final i in order) all[i]];
+}
+
+/// Filtro de la pestaña Actividad. [all] es el feed de siempre (solo
+/// check-ins); los otros tres suman o usan solo las publicaciones de Ahora
+/// (`GET /now/feed?scope=` toma el [name] tal cual).
+enum _Scope {
+  all('Todos'),
+  following('Siguiendo'),
+  nearby('Cerca de mí'),
+  friends('Amigos');
+
+  const _Scope(this.label);
+  final String label;
+  bool get hasCheckins => this == all || this == following;
+  bool get hasPosts => this != all;
+}
+
 class FeedScreen extends StatefulWidget {
   final String? placeId;
   final bool history;
-  const FeedScreen({super.key, this.placeId, this.history = false});
+
+  /// Solo para pruebas: API y GPS de mentira.
+  final ApiClient? api;
+  final NowLocator? locate;
+  const FeedScreen(
+      {super.key, this.placeId, this.history = false, this.api, this.locate});
   @override
   State<FeedScreen> createState() => _FeedScreenState();
 }
 
 class _FeedScreenState extends State<FeedScreen> {
-  final _api = ApiClient();
-  final _items = <CheckinItem>[];
+  late final ApiClient _api = widget.api ?? ApiClient();
+  final _checkins = <CheckinItem>[];
+  final _posts = <NowPost>[];
   final _liking = <String>{};
-  int _page = 0;
-  bool _more = true, _loading = false, _following = false;
+
+  // Cada fuente pagina aparte. En Siguiendo se piden las dos juntas (página N
+  // de cada una) y se mezclan; "Cargar más" pide la página siguiente de las que
+  // todavía tienen más. ponytail: el orden global solo es exacto dentro de lo
+  // ya cargado; si una fuente va más atrás en el tiempo que la otra, sus
+  // elementos nuevos se intercalan donde les toca, no al final.
+  int _ckPage = 0, _postPage = 0;
+  bool _ckMore = true, _postMore = true;
+
+  bool _loading = false;
+  _Scope _scope = _Scope.all;
   String _sort = 'recent';
   String? _error;
+
+  /// Cerca de mí: sin GPS no se llama a la API, se avisa.
+  bool _noLocation = false;
+  Position? _pos;
+
+  /// Sube al cambiar de filtro: lo que venga en vuelo del anterior se descarta.
+  int _gen = 0;
+
+  /// Historial y reseñas de un local no llevan filtros de Ahora.
+  bool get _hasTabs => !widget.history && widget.placeId == null;
+
+  bool get _more =>
+      (_scope.hasCheckins && _ckMore) || (_scope.hasPosts && _postMore);
+
   @override
   void initState() {
     super.initState();
     _load(reset: true);
   }
 
-  Future<void> _load({bool reset = false}) async {
-    if (_loading) return;
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final page = reset ? 1 : _page + 1;
-      final result = widget.history
+  Future<Paginated<CheckinItem>> _fetchCheckins(int page, _Scope scope) async =>
+      widget.history
           ? await _api.getMyCheckins(page: page)
           : await _api.getFeed(
               page: page,
-              following: _following,
+              following: scope == _Scope.following,
               placeId: widget.placeId,
               sort: _sort == 'photos' ? 'recent' : _sort,
               hasPhotos: _sort == 'photos');
-      if (!mounted) return;
+
+  Future<Paginated<NowPost>> _fetchPosts(int page, _Scope scope) async =>
+      _api.getNowFeed(scope.name,
+          page: page,
+          lat: scope == _Scope.nearby ? _pos?.latitude : null,
+          lng: scope == _Scope.nearby ? _pos?.longitude : null);
+
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _load({bool reset = false}) async {
+    if (_loading) return;
+    final scope = _scope;
+    final gen = _gen;
+    // Las pestañas de Ahora piden sesión; el invitado ve el aviso, sin llamadas.
+    if (scope != _Scope.all && !context.read<AuthProvider>().isLoggedIn) {
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+      _noLocation = false;
+    });
+    try {
+      if (scope == _Scope.nearby && (reset || _pos == null)) {
+        Position? p;
+        try {
+          p = await (widget.locate ?? currentNowPosition)();
+        } catch (_) {}
+        if (!mounted || gen != _gen) return;
+        if (p == null) {
+          setState(() {
+            _noLocation = true;
+            _pos = null;
+            _posts.clear();
+          });
+          return;
+        }
+        _pos = p;
+      }
+
+      final ckPage = reset ? 1 : _ckPage + 1;
+      final postPage = reset ? 1 : _postPage + 1;
+      final wantCk = scope.hasCheckins && (reset || _ckMore);
+      final wantPosts = scope.hasPosts && (reset || _postMore);
+
+      // Una fuente que falla no tumba a la otra.
+      Object? firstError;
+      Future<Paginated<T>?> guard<T>(Future<Paginated<T>> f) async {
+        try {
+          return await f;
+        } catch (e) {
+          firstError ??= e;
+          return null;
+        }
+      }
+
+      final ckFuture = wantCk ? guard(_fetchCheckins(ckPage, scope)) : null;
+      final postFuture = wantPosts ? guard(_fetchPosts(postPage, scope)) : null;
+      final ck = await ckFuture;
+      final posts = await postFuture;
+      if (!mounted || gen != _gen) return;
+
+      final failed = (wantCk && ck == null) || (wantPosts && posts == null);
+      final allFailed =
+          (wantCk || wantPosts) && (!wantCk || ck == null) && (!wantPosts || posts == null);
       setState(() {
-        if (reset) _items.clear();
-        _items.addAll(result.data);
-        _page = page;
-        _more = page < result.totalPages;
+        if (ck != null) {
+          if (reset) _checkins.clear();
+          _checkins.addAll(ck.data);
+          _ckPage = ckPage;
+          _ckMore = ckPage < ck.totalPages;
+        }
+        if (posts != null) {
+          if (reset) _posts.clear();
+          _posts.addAll(posts.data);
+          _postPage = postPage;
+          _postMore = postPage < posts.totalPages;
+        }
+        if (allFailed) _error = '$firstError';
       });
-    } catch (e) {
-      if (mounted) setState(() => _error = '$e');
+      if (failed && !allFailed) _snack('No se pudo cargar todo');
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && gen == _gen) setState(() => _loading = false);
+    }
+  }
+
+  void _select(_Scope scope) {
+    if (scope == _scope) return;
+    _gen++;
+    setState(() {
+      _scope = scope;
+      _checkins.clear();
+      _posts.clear();
+      _ckPage = _postPage = 0;
+      _ckMore = _postMore = true;
+      _loading = false;
+      _error = null;
+      _noLocation = false;
+      _pos = null;
+    });
+    _load(reset: true);
+  }
+
+  Future<void> _login() async {
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const LoginScreen()));
+    if (mounted && context.read<AuthProvider>().isLoggedIn) {
+      _load(reset: true);
     }
   }
 
@@ -76,86 +259,273 @@ class _FeedScreenState extends State<FeedScreen> {
       }
       await _load(reset: true);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$e')));
+      }
     } finally {
       if (mounted) setState(() => _liking.remove(item.id));
     }
   }
 
+  String get _emptyText => switch (_scope) {
+        _Scope.nearby => 'No hay publicaciones cerca por ahora.',
+        _Scope.friends => 'Tus amigos no han publicado nada por ahora.',
+        _ => 'Todavía no hay publicaciones.',
+      };
+
+  String get _loginText => switch (_scope) {
+        _Scope.following => 'Inicia sesión para ver lo que publican quienes sigues',
+        _Scope.nearby => 'Inicia sesión para ver lo que pasa cerca de ti',
+        _ => 'Inicia sesión para ver lo que publican tus amigos',
+      };
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-            title: Text(widget.history
-                ? 'Historial completo'
-                : widget.placeId != null
-                    ? 'Reseñas'
-                    : 'Actividad reciente')),
-        body: RefreshIndicator(
-            onRefresh: () => _load(reset: true),
-            child: ListView(padding: const EdgeInsets.all(16), children: [
-              if (!widget.history &&
-                  widget.placeId == null &&
-                  context.watch<AuthProvider>().isLoggedIn)
-                SegmentedButton<bool>(
-                    segments: const [
-                      ButtonSegment(value: false, label: Text('Todos')),
-                      ButtonSegment(value: true, label: Text('Siguiendo'))
-                    ],
-                    selected: {
-                      _following
-                    },
-                    onSelectionChanged: _loading
-                        ? null
-                        : (s) {
-                            setState(() => _following = s.first);
-                            _load(reset: true);
-                          }),
-              if (widget.placeId != null)
-                DropdownButton<String>(
-                    value: _sort,
-                    isExpanded: true,
-                    items: const [
-                      DropdownMenuItem(
-                          value: 'recent', child: Text('Más recientes')),
-                      DropdownMenuItem(
-                          value: 'top_rated', child: Text('Mayor puntuación')),
-                      DropdownMenuItem(
-                          value: 'low_rated', child: Text('Menor puntuación')),
-                      DropdownMenuItem(
-                          value: 'photos', child: Text('Con fotos'))
-                    ],
-                    onChanged: _loading
-                        ? null
-                        : (v) {
-                            setState(() => _sort = v!);
-                            _load(reset: true);
-                          }),
-              for (final item in _items)
+  Widget build(BuildContext context) {
+    final loggedIn = context.watch<AuthProvider>().isLoggedIn;
+    final locked = _scope != _Scope.all && !loggedIn;
+    // Siguiendo mezcla por fecha; el resto va como lo ordena el servidor
+    // (Todos y reseñas de un local traen su propio orden: más reciente, mejor
+    // puntuación...).
+    final entries = _scope == _Scope.following
+        ? mergeFeed(_checkins, _posts)
+        : <FeedEntry>[
+            for (final c in _checkins) CheckinEntry(c),
+            for (final p in _posts) PostEntry(p),
+          ];
+    return Scaffold(
+      appBar: AppBar(
+          title: Text(widget.history
+              ? 'Historial completo'
+              : widget.placeId != null
+                  ? 'Reseñas'
+                  : 'Actividad reciente')),
+      body: RefreshIndicator(
+          onRefresh: () => _load(reset: true),
+          child: ListView(padding: const EdgeInsets.all(16), children: [
+            if (_hasTabs)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(children: [
+                  for (final s in _Scope.values)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(s.label),
+                        selected: s == _scope,
+                        showCheckmark: false,
+                        selectedColor: AppColors.primaryContainer,
+                        backgroundColor: Colors.white,
+                        side: BorderSide(
+                            color: s == _scope
+                                ? AppColors.primary
+                                : AppColors.border),
+                        labelStyle: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: s == _scope
+                                ? AppColors.primary
+                                : AppColors.onSurface),
+                        onSelected: (_) => _select(s),
+                      ),
+                    ),
+                ]),
+              ),
+            if (widget.placeId != null)
+              DropdownButton<String>(
+                  value: _sort,
+                  isExpanded: true,
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'recent', child: Text('Más recientes')),
+                    DropdownMenuItem(
+                        value: 'top_rated', child: Text('Mayor puntuación')),
+                    DropdownMenuItem(
+                        value: 'low_rated', child: Text('Menor puntuación')),
+                    DropdownMenuItem(value: 'photos', child: Text('Con fotos'))
+                  ],
+                  onChanged: _loading
+                      ? null
+                      : (v) {
+                          setState(() => _sort = v!);
+                          _load(reset: true);
+                        }),
+            if (locked)
+              _Notice(
+                  icon: Icons.lock_outline,
+                  text: _loginText,
+                  action: 'Iniciar sesión',
+                  onAction: _login)
+            else ...[
+              for (final entry in entries)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 14),
-                  child: _CheckinCard(
-                    item: item,
-                    canLike: !widget.history &&
-                        !_liking.contains(item.id) &&
-                        !_loading,
-                    onLike: () => _like(item),
-                  ),
+                  child: switch (entry) {
+                    CheckinEntry(:final item) => _CheckinCard(
+                        item: item,
+                        canLike: !widget.history &&
+                            !_liking.contains(item.id) &&
+                            !_loading,
+                        onLike: () => _like(item),
+                      ),
+                    PostEntry(:final post) => _NowCard(
+                        post: post,
+                        onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => NowPostScreen(
+                                    postId: post.id,
+                                    api: widget.api,
+                                    locate: widget.locate))),
+                      ),
+                  },
                 ),
               if (_error != null)
                 Text(_error!, style: const TextStyle(color: Colors.red)),
               if (_loading) const LinearProgressIndicator(),
-              if (!_loading && _items.isEmpty)
-                const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text('Todavía no hay publicaciones.')),
-              if (!_loading && (_more || _error != null))
+              if (!_loading && _noLocation)
+                _Notice(
+                    icon: Icons.location_off_outlined,
+                    text: 'Activa tu ubicación para ver lo que pasa cerca',
+                    action: 'Reintentar',
+                    onAction: () => _load(reset: true)),
+              if (!_loading && !_noLocation && entries.isEmpty)
+                Padding(
+                    padding: const EdgeInsets.all(24), child: Text(_emptyText)),
+              if (!_loading && !_noLocation && (_more || _error != null))
                 TextButton(
                     onPressed: () => _load(reset: _error != null),
                     child: Text(_error != null ? 'Reintentar' : 'Cargar más')),
-            ])),
+            ],
+          ])),
+    );
+  }
+}
+
+/// Aviso con un botón: pide iniciar sesión o activar la ubicación.
+class _Notice extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final String action;
+  final VoidCallback onAction;
+  const _Notice(
+      {required this.icon,
+      required this.text,
+      required this.action,
+      required this.onAction});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 8),
+        child: Column(children: [
+          Icon(icon, size: 40, color: AppColors.primary),
+          const SizedBox(height: 12),
+          Text(text, textAlign: TextAlign.center, style: AppText.bodyMd),
+          const SizedBox(height: 12),
+          FilledButton(onPressed: onAction, child: Text(action)),
+        ]),
       );
+}
+
+/// Publicación de Ahora en el feed: autor, "⚡ quedan X h", texto y miniatura.
+/// Tocarla abre la publicación (ahí se reacciona y se reporta).
+class _NowCard extends StatelessWidget {
+  final NowPost post;
+  final VoidCallback onTap;
+  const _NowCard({required this.post, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final author = post.authorName.trim();
+    final avatar = post.authorAvatar;
+    final text = (post.text ?? '').trim();
+    final media = post.mediaUrl;
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadows.card,
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    CircleAvatar(
+                      radius: 14,
+                      backgroundColor: AppColors.secondary,
+                      backgroundImage: avatar != null && avatar.isNotEmpty
+                          ? CachedNetworkImageProvider(avatar)
+                          : null,
+                      child: avatar == null || avatar.isEmpty
+                          ? const Icon(Icons.person,
+                              size: 16, color: Colors.white)
+                          : null,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(author.isEmpty ? 'Usuario' : '@$author',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.bodyLg
+                              .copyWith(fontWeight: FontWeight.w600)),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                          color: AppColors.primaryContainer,
+                          borderRadius: BorderRadius.circular(8)),
+                      child: Text(
+                          '⚡ ${timeLeftLabel(post.timeLeft(DateTime.now()))}',
+                          style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary)),
+                    ),
+                  ]),
+                  if (media != null && media.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: SizedBox(
+                        height: 160,
+                        width: double.infinity,
+                        child: post.kind == 'video'
+                            // La miniatura de un video no se puede pintar como imagen.
+                            ? Container(
+                                color: AppColors.primaryContainer,
+                                child: const Icon(
+                                    Icons.play_circle_outline_rounded,
+                                    size: 44,
+                                    color: AppColors.primary))
+                            : Image.network(media,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                    color: AppColors.surface,
+                                    child: const Icon(Icons.broken_image,
+                                        color: AppColors.onSurfaceVariant))),
+                      ),
+                    ),
+                  ],
+                  if (text.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Text(text,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.bodyLg),
+                  ],
+                ]),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _CheckinCard extends StatelessWidget {
