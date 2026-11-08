@@ -74,9 +74,13 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
     _load();
   }
 
+  /// Pide un extra de la ficha. ApiClient no tiene tiempo límite, así que si el
+  /// servidor no contesta en 8 s se da por perdido y solo se oculta su sección.
   Future<dynamic> _optional(String path, {Map<String, String>? query}) async {
     try {
-      return await _api.get(path, query: query);
+      return await _api
+          .get(path, query: query)
+          .timeout(const Duration(seconds: 8));
     } catch (_) {
       return null;
     }
@@ -121,30 +125,34 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
       }
     } catch (_) {}
 
+    // La ficha se pinta ya con lo esencial; los extras llegan después.
+    if (!mounted) return;
+    setState(() {
+      _place = place;
+      _reviews = reviews;
+      _favorited = favorited;
+      _loyaltyProgram = loyaltyProgram;
+      _loyaltyCard = loyaltyCard;
+      _loading = false;
+    });
+
     // Fotos (carrusel y pestaña), promociones (caja) y acciones públicas
-    // (WhatsApp de pedidos, reservar) son extras: si fallan, la ficha sigue.
+    // (WhatsApp de pedidos, reservar) son extras: si tardan o fallan, la ficha
+    // sigue sin ellos.
     final id = widget.placeId;
     final extras = await Future.wait([
       _optional('/places/$id/photos', query: {'page': '1', 'limit': '9'}),
       _optional('/places/$id/promotions'),
       _optional('/public/places/$id/actions'),
     ]);
-
-    if (mounted) {
-      setState(() {
-        _place = place;
-        _reviews = reviews;
-        _favorited = favorited;
-        _loyaltyProgram = loyaltyProgram;
-        _loyaltyCard = loyaltyCard;
-        _photos = _photoUrls(extras[0]);
-        _promos = _activePromos(extras[1]);
-        _actions = extras[2] is Map<String, dynamic>
-            ? extras[2] as Map<String, dynamic>
-            : {};
-        _loading = false;
-      });
-    }
+    if (!mounted) return;
+    setState(() {
+      _photos = _photoUrls(extras[0]);
+      _promos = _activePromos(extras[1]);
+      _actions = extras[2] is Map<String, dynamic>
+          ? extras[2] as Map<String, dynamic>
+          : {};
+    });
   }
 
   Future<void> _toggleFavorite() async {
@@ -159,7 +167,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
       } else {
         await _api.addFavorite(widget.placeId);
       }
-      setState(() => _favorited = !_favorited);
+      if (mounted) setState(() => _favorited = !_favorited);
     } catch (_) {}
   }
 
@@ -282,7 +290,10 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen> {
                 const SizedBox(height: 16),
                 for (final t in tabs)
                   if (_visited.contains(t))
-                    Offstage(offstage: t != tab, child: _tabBody(t, place)),
+                    Offstage(
+                        key: ValueKey(t),
+                        offstage: t != tab,
+                        child: _tabBody(t, place)),
                 const SizedBox(height: 24),
               ],
             ),
@@ -676,8 +687,8 @@ List<PlaceQuickAction> placeQuickActions(
           'https://wa.me/$whatsapp?text=${Uri.encodeComponent('Hola, vi su ficha en Wuarikes.')}'),
     if (RegExp(r'^https?://', caseSensitive: false).hasMatch(booking))
       PlaceQuickAction(Icons.event_available_rounded, 'Reservar', booking),
-    if (phone.isNotEmpty)
-      PlaceQuickAction(Icons.call_rounded, 'Llamar', 'tel:${place.phone}'),
+    if (RegExp(r'\d').hasMatch(phone))
+      PlaceQuickAction(Icons.call_rounded, 'Llamar', telUrl(phone)),
   ];
 }
 

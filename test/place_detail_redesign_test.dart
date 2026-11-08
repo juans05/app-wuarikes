@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import 'package:wuarikes_app/screens/login_screen.dart';
 import 'package:wuarikes_app/screens/media_screen.dart';
 import 'package:wuarikes_app/screens/new_checkin_screen.dart';
 import 'package:wuarikes_app/screens/place_detail_screen.dart';
+import 'package:wuarikes_app/screens/place_extras.dart' show telUrl;
 import 'package:wuarikes_app/state/auth_provider.dart';
 
 Map<String, dynamic> _placeJson({
@@ -54,11 +56,17 @@ class _Fake {
           ...more,
         };
 
+  /// Rutas cuya petición nunca contesta.
+  final hang = <String>{};
+
   bool requested(String path) => seen.any((r) => r.url.path.endsWith(path));
+
+  int count(String path) => seen.where((r) => r.url.path.endsWith(path)).length;
 
   late final api = ApiClient(client: MockClient((req) async {
     seen.add(req);
     final path = req.url.path.replaceFirst('/api', '');
+    if (hang.contains(path)) return Completer<http.Response>().future;
     if (!routes.containsKey(path)) {
       return http.Response('{"message":"no hay"}', 404);
     }
@@ -245,6 +253,67 @@ void main() {
     });
   });
 
+  group('carga y pestañas', () {
+    testWidgets('un extra que no contesta no frena la ficha ni la barra',
+        (tester) async {
+      final fake = _Fake(_placeJson(), more: {
+        '/places/p1/promotions': [
+          {'id': 'a', 'title': '2x1 en ceviches'}
+        ],
+      });
+      fake.hang.add('/public/places/p1/actions');
+      await _pump(tester, fake);
+
+      // Los extras siguen esperando, pero la ficha ya está pintada.
+      expect(find.text('El Chinito'), findsOneWidget);
+      expect(find.text('📍 Estoy aquí · check-in'), findsOneWidget);
+      expect(find.byKey(const ValueKey('promo-box')), findsNothing);
+
+      // A los 8 s se da por perdido: los otros extras entran y la acción que
+      // no llegó (Reservar) simplemente no sale.
+      await tester.pump(const Duration(seconds: 9));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('promo-box')), findsOneWidget);
+      expect(find.byKey(const ValueKey('quick-Reservar')), findsNothing);
+      expect(find.text('El Chinito'), findsOneWidget);
+    });
+
+    testWidgets(
+        'abrir Reseñas, Fotos y Reseñas de nuevo no vuelve a pedir valoraciones',
+        (tester) async {
+      final fake = _Fake(_placeJson(), more: {
+        '/places/p1/rating-distribution': [
+          {'rating': 5, 'count': 3}
+        ],
+      });
+      await _pump(tester, fake);
+
+      await _openTab(tester, 'resenas');
+      await _openTab(tester, 'fotos');
+      await _openTab(tester, 'resenas');
+
+      expect(fake.count('/rating-distribution'), 1);
+      expect(find.text('Valoraciones'), findsOneWidget);
+    });
+
+    testWidgets(
+        'Carta y Reseñas abiertas fuera de orden piden cada una una sola vez',
+        (tester) async {
+      final fake = _Fake(_placeJson(claimedBy: 'owner-1'), more: {
+        '/places/p1/menu': {'place': {}, 'categories': []},
+      });
+      await _pump(tester, fake);
+
+      await _openTab(tester, 'resenas');
+      await _openTab(tester, 'carta');
+      await _openTab(tester, 'resenas');
+      await _openTab(tester, 'carta');
+
+      expect(fake.count('/menu'), 1);
+      expect(fake.count('/rating-distribution'), 1);
+    });
+  });
+
   group('acciones rápidas', () {
     testWidgets(
         'sin teléfono, dirección, coordenadas ni reserva no sale ninguna',
@@ -309,7 +378,7 @@ void main() {
           ['Cómo llegar', 'WhatsApp', 'Reservar', 'Llamar']);
       expect(actions[0].url, contains('destination=-12.12,-77.03'));
       expect(actions[1].url, startsWith('https://wa.me/51987654321?text='));
-      expect(actions[3].url, 'tel:987 654 321');
+      expect(actions[3].url, 'tel:987654321');
 
       // Sin coordenadas, Cómo llegar usa la dirección.
       final byAddress = placeQuickActions(
@@ -321,6 +390,16 @@ void main() {
       expect(
           placeQuickActions(
               Place.fromJson(_placeJson()), {'bookingUrl': 'javascript:x'}),
+          isEmpty);
+    });
+
+    test('telUrl y Llamar: solo dígitos y +', () {
+      expect(telUrl('(01) 456-7890'), 'tel:014567890');
+      expect(telUrl('+51 987 654 321'), 'tel:+51987654321');
+      final place = Place.fromJson(_placeJson(phone: '(01) 456-7890'));
+      expect(placeQuickActions(place, {}).single.url, 'tel:014567890');
+      // Un "teléfono" sin ningún dígito no ofrece Llamar.
+      expect(placeQuickActions(Place.fromJson(_placeJson(phone: 'N/D')), {}),
           isEmpty);
     });
 

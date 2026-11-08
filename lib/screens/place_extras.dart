@@ -268,7 +268,7 @@ class _PlaceExtrasState extends State<PlaceExtras> {
         Text(place.openHoursText ?? 'Horario no disponible'),
       if (place.phone != null)
         TextButton.icon(
-            onPressed: () => openExternal(context, 'tel:${place.phone}'),
+            onPressed: () => openExternal(context, telUrl(place.phone!)),
             icon: const Icon(Icons.call),
             label: Text(place.phone!)),
       if (details['website'] != null)
@@ -427,6 +427,10 @@ class _PromoTile extends StatelessWidget {
         ),
       );
 }
+
+/// Enlace `tel:` solo con dígitos y `+`: los espacios, guiones y paréntesis
+/// de un teléfono escrito a mano hacen fallar a algunos marcadores.
+String telUrl(String phone) => 'tel:${phone.replaceAll(RegExp(r'[^\d+]'), '')}';
 
 String _initial(String name) {
   final trimmed = name.trim();
