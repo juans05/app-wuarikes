@@ -40,7 +40,7 @@ class _NowPostScreenState extends State<NowPostScreen> {
   void initState() {
     super.initState();
     _load();
-    (widget.locate ?? currentNowPosition)().then((p) {
+    _locator().then((p) {
       if (mounted) {
         setState(() {
           _position = p;
@@ -51,6 +51,8 @@ class _NowPostScreenState extends State<NowPostScreen> {
       if (mounted) setState(() => _locating = false);
     });
   }
+
+  Future<Position?> _locator() => (widget.locate ?? currentNowPosition)();
 
   Future<void> _load() async {
     setState(() {
@@ -108,6 +110,18 @@ class _NowPostScreenState extends State<NowPostScreen> {
     if (post == null || _busy) return;
     setState(() => _busy = true);
     try {
+      // ✅ se decide con la posición de este momento, no con la de al abrir:
+      // quien se acercó puede confirmar, y quien se alejó ya no.
+      if (type == 'check' && post.myReaction != 'check') {
+        final fresh = await _locator();
+        if (!mounted) return;
+        setState(() => _position = fresh);
+        final d = _distance(post);
+        if (d == null || !canConfirm(d)) {
+          _snack('Acércate para confirmar');
+          return;
+        }
+      }
       final updated = post.myReaction == type
           ? await _api.unreactNow(post.id)
           : await _api.reactNow(post.id, type,
@@ -183,21 +197,23 @@ class _NowPostScreenState extends State<NowPostScreen> {
     final near = distance != null && canConfirm(distance);
     final checkHint = isAuthor || near
         ? '+1 h c/u'
-        : (_position == null && _locating
-            ? 'Ubicando…'
-            : 'Acércate para confirmar');
+        : post.myReaction == 'check'
+            ? 'Toca para quitar'
+            : (_position == null && _locating
+                ? 'Ubicando…'
+                : 'Acércate para confirmar');
 
+    // `dimmed`: se ve apagado pero se puede tocar (un ✅ lejano vuelve a
+    // ubicar y decide con la posición nueva).
     Widget reaction(String type, String emoji, int count, String hint,
-        {bool enabled = true}) {
-      final selected = post.myReaction == type;
+        {bool dimmed = false}) {
       return _ReactionButton(
         key: ValueKey('react-$type'),
         label: '$emoji $count',
         hint: hint,
-        selected: selected,
-        // Quien ya dio ✅ siempre puede quitarlo, esté donde esté.
-        enabled: enabled && !isAuthor && !_busy,
-        onTap: () => _react(type),
+        selected: post.myReaction == type,
+        enabled: !isAuthor && !dimmed,
+        onTap: isAuthor || _busy ? null : () => _react(type),
       );
     }
 
@@ -278,8 +294,9 @@ class _NowPostScreenState extends State<NowPostScreen> {
                 const SizedBox(width: 8),
                 reaction('dislike', '👎', post.dislikes, '−1 h c/u'),
                 const SizedBox(width: 8),
+                // Quien ya dio ✅ siempre puede quitarlo, esté donde esté.
                 reaction('check', '✅', post.checks, checkHint,
-                    enabled: near || post.myReaction == 'check'),
+                    dimmed: !near && post.myReaction != 'check'),
               ]),
               const SizedBox(height: 10),
               Text(
@@ -312,7 +329,7 @@ class _ReactionButton extends StatelessWidget {
   final String hint;
   final bool selected;
   final bool enabled;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _ReactionButton(
       {super.key,
@@ -329,7 +346,7 @@ class _ReactionButton extends StatelessWidget {
         opacity: enabled ? 1 : 0.4,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: enabled ? onTap : null,
+          onTap: onTap,
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
             decoration: BoxDecoration(

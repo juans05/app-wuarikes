@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wuarikes_app/core/api_client.dart';
 import 'package:wuarikes_app/core/models.dart';
+import 'package:wuarikes_app/core/now_location.dart';
 import 'package:wuarikes_app/core/now_models.dart';
 import 'package:wuarikes_app/screens/explore_screen.dart';
 import 'package:wuarikes_app/screens/login_screen.dart';
@@ -171,14 +172,28 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 100));
 }
 
+/// GPS de mentira que da una posición distinta en cada llamada (la última se
+/// repite) y cuenta cuántas veces se le pidió.
+class _Gps {
+  final List<Position?> positions;
+  int calls = 0;
+  _Gps(this.positions);
+  Future<Position?> call() async {
+    final i = calls++;
+    return positions[i < positions.length ? i : positions.length - 1];
+  }
+}
+
 Future<void> _pumpPost(WidgetTester tester, _FakeNow fake,
-    {AuthProvider? auth, Position? position}) async {
+    {AuthProvider? auth, Position? position, NowLocator? locate}) async {
   await _phone(tester);
   await tester.pumpWidget(ChangeNotifierProvider<AuthProvider>.value(
     value: auth ?? _auth(),
     child: MaterialApp(
       home: NowPostScreen(
-          postId: 'post-1', api: fake.api, locate: () async => position),
+          postId: 'post-1',
+          api: fake.api,
+          locate: locate ?? () async => position),
     ),
   ));
   await _settle(tester);
@@ -255,6 +270,66 @@ void main() {
         'longitude': near.longitude,
       });
       expect(find.text('✅ 3'), findsOneWidget);
+    });
+
+    testWidgets(
+        '✅ lejos al abrir pero cerca al tocar: vuelve a ubicar y confirma con la posición nueva',
+        (tester) async {
+      final fake = _FakeNow();
+      final gps = _Gps([far, near]);
+      await _pumpPost(tester, fake, locate: gps.call);
+      expect(find.text('Acércate para confirmar'), findsOneWidget);
+      expect(gps.calls, 1);
+
+      // Aunque se vea apagado, tocarlo vuelve a ubicar.
+      await tester.tap(find.text('✅ 2'));
+      await _settle(tester);
+
+      expect(gps.calls, 2);
+      final put = fake.where('PUT', '/reaction').single;
+      expect(jsonDecode(put.body), {
+        'type': 'check',
+        'latitude': near.latitude,
+        'longitude': near.longitude,
+      });
+      expect(find.text('✅ 3'), findsOneWidget);
+      expect(find.text('Acércate para confirmar'), findsNothing);
+    });
+
+    testWidgets('✅ cerca al abrir pero lejos al tocar: no se manda',
+        (tester) async {
+      final fake = _FakeNow();
+      final gps = _Gps([near, far]);
+      await _pumpPost(tester, fake, locate: gps.call);
+      expect(find.text('Acércate para confirmar'), findsNothing);
+
+      await tester.tap(find.text('✅ 2'));
+      await _settle(tester);
+
+      expect(gps.calls, 2);
+      expect(fake.where('PUT', '/reaction'), isEmpty);
+      // Aviso (snackbar) y el botón ya se ve apagado con la posición nueva.
+      expect(find.text('Acércate para confirmar'), findsNWidgets(2));
+      expect(_opacityOf(tester, 'react-check'), lessThan(1));
+    });
+
+    testWidgets(
+        'con tu ✅ dado y lejos: "Toca para quitar" y se quita sin ubicar',
+        (tester) async {
+      final fake = _FakeNow(post: _postJson('post-1', myReaction: 'check'));
+      final gps = _Gps([far]);
+      await _pumpPost(tester, fake, locate: gps.call);
+
+      expect(find.text('Toca para quitar'), findsOneWidget);
+      expect(find.text('Acércate para confirmar'), findsNothing);
+      expect(_opacityOf(tester, 'react-check'), 1);
+
+      await tester.tap(find.text('✅ 2'));
+      await _settle(tester);
+
+      expect(gps.calls, 1); // solo la de al abrir
+      expect(fake.where('DELETE', '/reaction'), hasLength(1));
+      expect(find.text('✅ 1'), findsOneWidget);
     });
 
     testWidgets('👍 llama a reactNow y sube el conteo; otra vez lo quita',
@@ -378,6 +453,7 @@ void main() {
       required ApiClient api,
       AuthProvider? auth,
       Position? position,
+      NowLocator? locate,
       NowMediaPicker? pick,
     }) async {
       await _phone(tester);
@@ -389,7 +465,7 @@ void main() {
               builder: (context) => TextButton(
                 onPressed: () => showPublishNowSheet(context,
                     api: api,
-                    locate: () async => position,
+                    locate: locate ?? () async => position,
                     pick: pick ?? (_, {required video}) async => null),
                 child: const Text('abrir'),
               ),
@@ -549,6 +625,78 @@ void main() {
 
       expect(find.text('Activa tu ubicación para publicar'), findsOneWidget);
       expect(seen, isEmpty);
+    });
+
+    testWidgets(
+        'publica con el GPS de ese momento, no con el de al abrir la hoja',
+        (tester) async {
+      final seen = <http.Request>[];
+      final a = _at(_centerLat, _centerLng);
+      final b = _at(_centerLat + 0.01, _centerLng + 0.01);
+      final gps = _Gps([a, b]);
+      await pumpSheet(tester, api: ApiClient(client: MockClient((r) async {
+        seen.add(r);
+        return _ok(_postJson('nuevo'), 201);
+      })), locate: gps.call);
+      expect(gps.calls, 1);
+
+      await tester.tap(find.text('✏️ Texto'));
+      await tester.pump();
+      await tester.enterText(find.byKey(const Key('now-text')), 'Hay cola');
+      await tester.tap(find.byKey(const Key('publish-button')));
+      await tester.pumpAndSettle();
+
+      expect(gps.calls, 2);
+      final body = jsonDecode(seen.single.body) as Map;
+      expect(body['latitude'], b.latitude);
+      expect(body['longitude'], b.longitude);
+    });
+
+    testWidgets('si al publicar ya no hay GPS, no se manda y se avisa',
+        (tester) async {
+      final seen = <http.Request>[];
+      final gps = _Gps([here, null]);
+      await pumpSheet(tester, api: ApiClient(client: MockClient((r) async {
+        seen.add(r);
+        return _ok(_postJson('nuevo'), 201);
+      })), locate: gps.call);
+
+      await tester.tap(find.text('✏️ Texto'));
+      await tester.pump();
+      await tester.enterText(find.byKey(const Key('now-text')), 'Hay cola');
+      await tester.tap(find.byKey(const Key('publish-button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Activa tu ubicación para publicar'), findsOneWidget);
+      expect(seen, isEmpty);
+      expect(find.text('¿Qué está pasando?'), findsOneWidget);
+    });
+
+    testWidgets('cambiar de Foto a Video suelta el archivo elegido',
+        (tester) async {
+      await pumpSheet(tester,
+          api: ApiClient(client: MockClient((r) async => _ok({}))),
+          position: here,
+          pick: (source, {required video}) async => XFile.fromData(
+              Uint8List.fromList(List.filled(8, 1)),
+              name: 'foto.png',
+              path: 'foto.png'));
+
+      await tester.tap(find.byKey(const Key('media-tile')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Elegir de la galería'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('foto.png'), findsOneWidget);
+
+      await tester.tap(find.text('🎥 Video'));
+      await tester.pump();
+      await tester.tap(find.text('📷 Foto'));
+      await tester.pump();
+
+      expect(find.textContaining('foto.png'), findsNothing);
+      await tester.tap(find.byKey(const Key('publish-button')));
+      await tester.pump();
+      expect(find.text('Elige una foto o cambia a Texto'), findsOneWidget);
     });
 
     testWidgets('texto vacío o foto sin elegir: avisa y no llama a la API',
@@ -911,6 +1059,41 @@ void main() {
 
       expect(find.byKey(const ValueKey('now-pin-post-nuevo')), findsOneWidget);
       expect(find.byKey(const ValueKey('now-pin-post-viejo')), findsNothing);
+    });
+
+    testWidgets(
+        'publicar fuera de la vista: el mapa va al punto y se pide /now una sola vez',
+        (tester) async {
+      final seen = <http.Request>[];
+      await pumpExplore(tester, exploreApi(seen));
+      final far = _postJson('lejos', lat: _centerLat + 0.05);
+
+      nowPostPublished.value = NowPost.fromJson(far);
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pump(const Duration(milliseconds: 600));
+
+      final calls = seen.where((r) => r.url.path.endsWith('/now')).toList();
+      expect(calls, hasLength(1), reason: 'sin segunda petición por la espera');
+      final q = calls.single.url.queryParameters;
+      // La zona pedida ya es la del mapa movido: incluye el punto nuevo.
+      expect(double.parse(q['minLat']!), lessThan(_centerLat + 0.05));
+      expect(double.parse(q['maxLat']!), greaterThan(_centerLat + 0.05));
+    });
+
+    testWidgets('publicar estando ya en Ahora tampoco duplica la petición',
+        (tester) async {
+      final seen = <http.Request>[];
+      await pumpExplore(tester, exploreApi(seen));
+      await tester.tap(find.text('⚡ Ahora'));
+      await _settle(tester);
+      expect(nowCalls(seen), 1);
+
+      nowPostPublished.value =
+          NowPost.fromJson(_postJson('lejos', lat: _centerLat + 0.05));
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(nowCalls(seen), 2);
     });
 
     testWidgets('al publicar, Explorar pasa a Ahora y el pin nuevo aparece',

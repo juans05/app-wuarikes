@@ -126,7 +126,10 @@ class _PublishSheetState extends State<_PublishSheet> {
     if (kind == _kind) return;
     setState(() {
       _kind = kind;
-      _bytes = null; // la foto no sirve de video ni al revés
+      // La foto no sirve de video ni al revés: se suelta el archivo completo.
+      _bytes = null;
+      _fileName = '';
+      _fileMime = null;
       _error = null;
     });
   }
@@ -184,8 +187,6 @@ class _PublishSheetState extends State<_PublishSheet> {
       problem = _kind == 'photo'
           ? 'Elige una foto o cambia a Texto'
           : 'Elige un video o cambia a Texto';
-    } else if (_position == null) {
-      problem = 'Activa tu ubicación para publicar';
     } else {
       problem = null;
     }
@@ -200,12 +201,21 @@ class _PublishSheetState extends State<_PublishSheet> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     try {
+      // Siempre la posición de ahora: la de al abrir la hoja pudo quedar vieja
+      // (se publica donde uno está, no donde estaba).
+      final here = await widget.locate();
+      if (!mounted) return;
+      setState(() => _position = here);
+      if (here == null) {
+        setState(() => _error = 'Activa tu ubicación para publicar');
+        return;
+      }
       final post = await widget.api.createNowPost(
         kind: _kind,
         text: text,
         visibility: _visibility,
-        latitude: _position!.latitude,
-        longitude: _position!.longitude,
+        latitude: here.latitude,
+        longitude: here.longitude,
         bytes: _kind == 'text' ? null : _bytes,
         filename: _fileName.isEmpty ? null : _fileName,
         mimeType: _fileMime,

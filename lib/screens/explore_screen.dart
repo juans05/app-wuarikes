@@ -428,14 +428,21 @@ class _ExploreScreenState extends State<ExploreScreen> {
   void _onNowPublished() {
     final post = nowPostPublished.value;
     if (post == null || !mounted) return;
-    _setMode(ExploreMode.now);
+    // Primero el mapa, para que la zona pedida ya incluya el punto nuevo.
     if (_mapReady) {
       final point = LatLng(post.latitude, post.longitude);
       if (!_mapController.camera.visibleBounds.contains(point)) {
         _mapController.move(point, _mapController.camera.zoom);
       }
     }
-    _loadNow();
+    // Una sola petición: mover el mapa en Ahora arma la espera de 400 ms y
+    // aquí se pide ya, así que esa espera se cancela.
+    if (_mode == ExploreMode.now) {
+      _loadNow();
+    } else {
+      _setMode(ExploreMode.now);
+    }
+    _nowDebounce?.cancel();
   }
 
   void _openDiscovery() {
