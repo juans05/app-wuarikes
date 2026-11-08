@@ -86,37 +86,37 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
                     TextButton(
                         onPressed: _load, child: const Text('Reintentar'))
                   ]))
-                : _posts.isEmpty
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(
-                              'Todavía no publicaste nada en Ahora. Usa el ＋ para contar lo que pasa donde estás.',
-                              textAlign: TextAlign.center,
-                              style: AppText.bodyMd),
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _load,
-                        child: ListView(
-                          padding: const EdgeInsets.all(16),
-                          children: [
-                            for (final p in _posts) ...[
-                              _PostRow(
-                                  post: p,
-                                  onTap: () => Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                          builder: (_) => NowPostScreen(
-                                              postId: p.id, api: widget.api)))),
-                              const SizedBox(height: 8),
-                            ],
-                            if (_page < _totalPages)
-                              TextButton(
-                                  onPressed: _loadingMore ? null : _loadMore,
-                                  child: const Text('Cargar más')),
-                          ],
-                        ),
-                      ),
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    child: ListView(
+                      // Siempre desplazable: vacía también se puede jalar para refrescar.
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        if (_posts.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 48),
+                            child: Text(
+                                'Todavía no publicaste nada en Ahora. Usa el ＋ para contar lo que pasa donde estás.',
+                                textAlign: TextAlign.center,
+                                style: AppText.bodyMd),
+                          ),
+                        for (final p in _posts) ...[
+                          _PostRow(
+                              post: p,
+                              onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (_) => NowPostScreen(
+                                          postId: p.id, api: widget.api)))),
+                          const SizedBox(height: 8),
+                        ],
+                        if (_page < _totalPages)
+                          TextButton(
+                              onPressed: _loadingMore ? null : _loadMore,
+                              child: const Text('Cargar más')),
+                      ],
+                    ),
+                  ),
       ),
     );
   }

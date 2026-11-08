@@ -172,13 +172,12 @@ final _gradients = <List<Color>>[
   ],
 ];
 
-/// ¿Ya juntó los sellos del premio? `rewardReady` mira `stampsRemaining == 0`,
-/// pero el backend manda de 1 a la meta (meta - sellos % meta), nunca 0: con
-/// los sellos completos dice "meta". Por eso también cuenta tener la meta.
+/// ¿Ya juntó los sellos del premio? Cuenta tener la meta o más. No se usa
+/// `rewardReady` (`stampsRemaining == 0`): el backend manda de 1 a la meta
+/// (meta - sellos % meta), nunca 0, así que con datos reales no se cumple.
 bool _isReady(MyLoyaltyCard c) {
   final goal = c.stampsToReward ?? 0;
-  return c.programType == 'stamps' &&
-      (c.rewardReady || (goal > 0 && c.stamps >= goal));
+  return c.programType == 'stamps' && goal > 0 && c.stamps >= goal;
 }
 
 class _PrizeCard extends StatelessWidget {

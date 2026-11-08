@@ -119,7 +119,7 @@ void main() {
                 _card('p1', 'El Chinito', stamps: 6, goal: 8, remaining: 2),
                 // Completa como la manda el backend: meta - (sellos % meta) = meta.
                 _card('p2', 'Cafe Bisetti', stamps: 4, goal: 4, remaining: 4),
-                // Completa como la contempla el modelo: faltan 0.
+                // Completa con faltan 0 (el backend no lo manda, pero sigue siendo completa).
                 _card('p3', 'Barberia Don Lucho',
                     stamps: 5, goal: 5, remaining: 0),
                 // Puntos: no hay sellos que completar.
@@ -136,6 +136,22 @@ void main() {
       expect(find.text('🎉 ¡Listo para canjear!'), findsNWidgets(2));
       expect(find.text('2 sellos para "Postre gratis"'), findsOneWidget);
       expect(find.text('120 puntos acumulados'), findsOneWidget);
+    });
+
+    testWidgets(
+        'con sellos de sobra (10 de 8, el backend manda faltan 6) esta listo',
+        (tester) async {
+      await _pump(
+          tester,
+          MyLoyaltyScreen(
+              api: _cardsApi(
+                  [_card('p1', 'El Chinito', stamps: 10, goal: 8, remaining: 6)]),
+              locate: () async => null),
+          _auth());
+
+      expect(find.text('🎉 ¡Listo para canjear!'), findsOneWidget);
+      expect(_stamps('full'), findsNWidgets(8));
+      expect(_stamps('empty'), findsNothing);
     });
 
     testWidgets('sin tarjetas completas no sale "Listo para canjear"',
@@ -455,6 +471,31 @@ void main() {
               : _ok({})));
       await _pump(tester, MyPostsScreen(api: api), _auth());
 
+      expect(find.textContaining('Todavía no publicaste nada en Ahora'),
+          findsOneWidget);
+    });
+
+    testWidgets('Mis publicaciones vacia: jalar vuelve a pedir /now/mine',
+        (tester) async {
+      final asked = <http.Request>[];
+      final api = ApiClient(client: MockClient((req) async {
+        if (req.url.path.endsWith('/now/mine')) {
+          asked.add(req);
+          return _ok({'data': [], 'total': 0});
+        }
+        return _ok({});
+      }));
+      await _pump(tester, MyPostsScreen(api: api), _auth());
+      expect(asked, hasLength(1));
+      expect(find.textContaining('Todavía no publicaste nada en Ahora'),
+          findsOneWidget);
+
+      await tester.drag(find.byType(ListView), const Offset(0, 400));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(asked, hasLength(2));
       expect(find.textContaining('Todavía no publicaste nada en Ahora'),
           findsOneWidget);
     });
