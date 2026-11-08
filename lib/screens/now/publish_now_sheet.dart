@@ -225,7 +225,8 @@ class _PublishSheetState extends State<_PublishSheet> {
         filename: _fileName.isEmpty ? null : _fileName,
         mimeType: _fileMime,
       );
-      if (mounted) navigator.pop();
+      // Si la hoja ya se cerró por arrastre, no sacar la pantalla de debajo.
+      if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) navigator.pop();
       messenger
           .showSnackBar(const SnackBar(content: Text('Publicado. Dura 24 h.')));
       nowPostPublished.value = post;
