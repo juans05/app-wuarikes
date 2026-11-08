@@ -8,20 +8,28 @@ import '../core/external_actions.dart';
 import '../state/auth_provider.dart';
 import '../widgets/async_section.dart';
 import 'login_screen.dart';
-import 'media_screen.dart';
-import 'feed_screen.dart';
 import 'social_screen.dart';
 import 'info_suggestion_dialog.dart';
 
+/// Lo que la ficha del local muestra en la pestaña Resumen, además de lo que
+/// pinta la propia pantalla: visita rápida, "Quiero ir", verificación, amigos,
+/// promociones extra, lo más pedido, horario y contacto, y reportar datos.
+/// La carta y las valoraciones viven en [PlaceMenu] y [PlaceRatings].
 class PlaceExtras extends StatefulWidget {
   final Place place;
-  const PlaceExtras({super.key, required this.place});
+  final ApiClient? api;
+
+  /// Promociones vigentes que la caja de la ficha no muestra (la caja lleva la
+  /// primera). Cada una es el JSON de `GET /places/:id/promotions`.
+  final List<dynamic> morePromos;
+  const PlaceExtras(
+      {super.key, required this.place, this.api, this.morePromos = const []});
   @override
   State<PlaceExtras> createState() => _PlaceExtrasState();
 }
 
 class _PlaceExtrasState extends State<PlaceExtras> {
-  final _api = ApiClient();
+  late final ApiClient _api = widget.api ?? ApiClient();
   bool _interested = false, _busy = false;
   int _count = 0, _revision = 0;
   String? _message;
@@ -42,11 +50,12 @@ class _PlaceExtrasState extends State<PlaceExtras> {
   Future<void> _interest() async {
     try {
       final data = await _api.get('/places/$_id/interest');
-      if (mounted)
+      if (mounted) {
         setState(() {
           _interested = data['isInterested'] == true;
           _count = data['count'] ?? 0;
         });
+      }
     } catch (_) {
       /* Public detail remains available when authentication is required. */
     }
@@ -78,12 +87,14 @@ class _PlaceExtrasState extends State<PlaceExtras> {
     });
     try {
       var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied)
+      if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
+      }
       if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever)
+          permission == LocationPermission.deniedForever) {
         throw ApiException(
             400, 'Activa el permiso de ubicación para registrar tu visita.');
+      }
       final position = await Geolocator.getCurrentPosition(
           locationSettings:
               const LocationSettings(timeLimit: Duration(seconds: 20)));
@@ -118,37 +129,15 @@ class _PlaceExtrasState extends State<PlaceExtras> {
           child: FilledButton.icon(
               onPressed: _busy ? null : _quick,
               icon: const Icon(Icons.my_location, size: 18),
-              label: const Text('Estoy aquí')),
+              label: const Text('Visita rápida')),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: OutlinedButton.icon(
               onPressed: _busy ? null : _toggle,
-              icon: Icon(
-                  _interested ? Icons.bookmark : Icons.bookmark_outline,
+              icon: Icon(_interested ? Icons.bookmark : Icons.bookmark_outline,
                   size: 18),
               label: Text('Quiero ir · $_count')),
-        ),
-      ]),
-      const SizedBox(height: 8),
-      Row(children: [
-        Expanded(
-          child: OutlinedButton.icon(
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => MediaScreen(
-                      placeId: _id,
-                      ownerId:
-                          widget.place.details['claimedByUserId'] as String?))),
-              icon: const Icon(Icons.photo_library_outlined, size: 18),
-              label: const Text('Fotos')),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: OutlinedButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => FeedScreen(placeId: _id))),
-              icon: const Icon(Icons.reviews_outlined, size: 18),
-              label: const Text('Reseñas')),
         ),
       ]),
       if (_busy)
@@ -197,8 +186,7 @@ class _PlaceExtrasState extends State<PlaceExtras> {
               return _SectionBox(
                   child: Column(children: [
                 for (var i = 0; i < friends.length; i++) ...[
-                  if (i > 0)
-                    const Divider(height: 14, color: AppColors.border),
+                  if (i > 0) const Divider(height: 14, color: AppColors.border),
                   InkWell(
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) =>
@@ -207,8 +195,7 @@ class _PlaceExtrasState extends State<PlaceExtras> {
                       CircleAvatar(
                         radius: 16,
                         backgroundColor: AppColors.primaryContainer,
-                        child: Text(
-                            _initial('${friends[i]['fullName'] ?? ''}'),
+                        child: Text(_initial('${friends[i]['fullName'] ?? ''}'),
                             style: AppText.bodyMd.copyWith(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w700)),
@@ -224,112 +211,17 @@ class _PlaceExtrasState extends State<PlaceExtras> {
                 ],
               ]));
             }),
-      AsyncSection(
-          title: 'Promociones',
-          load: () => _api.get('/places/$_id/promotions'),
-          builder: (data) {
-            final promos = data as List;
-            if (promos.isEmpty) {
-              return const _EmptyHint(
-                  icon: Icons.local_offer_outlined,
-                  text: 'No hay promociones vigentes.');
-            }
-            return Column(children: [
-              for (final promo in promos)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _SectionBox(
-                    child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(Icons.local_offer_rounded,
-                              size: 18, color: AppColors.primary),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('${promo['title']}',
-                                      style: AppText.bodyLg.copyWith(
-                                          fontWeight: FontWeight.w600)),
-                                  if ((promo['description'] ?? '')
-                                      .toString()
-                                      .isNotEmpty)
-                                    Text('${promo['description']}',
-                                        style: AppText.bodyMd),
-                                ]),
-                          ),
-                        ]),
-                  ),
-                ),
-            ]);
-          }),
-      AsyncSection(
-          title: 'Carta',
-          load: () => _api.get('/places/$_id/menu'),
-          builder: (data) {
-            final images = data['place']?['menuImageUrls'] as List? ?? [];
-            final categories = data['categories'] as List? ?? [];
-            if (images.isEmpty && categories.isEmpty) {
-              return const _EmptyHint(
-                  icon: Icons.menu_book_outlined,
-                  text: 'Todavía no hay carta disponible.');
-            }
-            return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final url in images)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: InkWell(
-                        onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => Scaffold(
-                                    appBar:
-                                        AppBar(title: const Text('Carta')),
-                                    body: InteractiveViewer(
-                                        child: Image.network(url))))),
-                        child: ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: Image.network(url,
-                                height: 200, fit: BoxFit.contain)),
-                      ),
-                    ),
-                  for (final category in categories)
-                    ExpansionTile(
-                        initiallyExpanded: true,
-                        tilePadding: EdgeInsets.zero,
-                        shape: const Border(),
-                        collapsedShape: const Border(),
-                        title: Text('${category['name']}',
-                            style: AppText.bodyLg
-                                .copyWith(fontWeight: FontWeight.w600)),
-                        children: [
-                          for (final dish in category['dishes'] ?? [])
-                            ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                title: Text('${dish['name']}',
-                                    style: AppText.bodyLg),
-                                subtitle: Text(
-                                    [
-                                      dish['description'],
-                                      if ((dish['ingredients'] as List? ?? [])
-                                          .isNotEmpty)
-                                        'Ingredientes: ${(dish['ingredients'] as List).join(', ')}',
-                                      if ((dish['allergens'] as List? ?? [])
-                                          .isNotEmpty)
-                                        'Alérgenos: ${(dish['allergens'] as List).join(', ')}',
-                                      if (dish['isAvailable'] == false)
-                                        'No disponible'
-                                    ].whereType<String>().join('\n'),
-                                    style: AppText.bodyMd),
-                                trailing: Text('S/ ${dish['price'] ?? '-'}',
-                                    style: AppText.bodyMd.copyWith(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w700)))
-                        ]),
-                ]);
-          }),
+      if (widget.morePromos.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text('Más promociones',
+                style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            for (final promo in widget.morePromos) _PromoTile(promo: promo),
+          ]),
+        ),
       AsyncSection(
           key: ValueKey('dishes-$_revision'),
           title: 'Lo más pedido',
@@ -360,10 +252,6 @@ class _PlaceExtrasState extends State<PlaceExtras> {
               ],
             ]));
           }),
-      AsyncSection(
-          title: 'Valoraciones',
-          load: () => _api.get('/places/$_id/rating-distribution'),
-          builder: (data) => _RatingBreakdown(rows: data as List)),
       Text('Horario y contacto', style: Theme.of(context).textTheme.titleLarge),
       if ((details['openingHours'] as List? ?? []).isNotEmpty)
         for (final day in details['openingHours'])
@@ -407,7 +295,7 @@ class _PlaceExtrasState extends State<PlaceExtras> {
           onPressed: _busy
               ? null
               : () async {
-                  if (!await _login() || !mounted) return;
+                  if (!await _login() || !context.mounted) return;
                   final sent = await showDialog<bool>(
                       context: context,
                       builder: (_) => InfoSuggestionDialog(placeId: _id));
@@ -423,6 +311,121 @@ class _PlaceExtrasState extends State<PlaceExtras> {
       ),
     ]);
   }
+}
+
+/// Pestaña Carta de la ficha: imágenes de la carta y platos por categoría.
+/// La ficha solo la ofrece si el local está reclamado (`claimedByUserId`).
+class PlaceMenu extends StatelessWidget {
+  final String placeId;
+  final ApiClient api;
+  const PlaceMenu({super.key, required this.placeId, required this.api});
+
+  @override
+  Widget build(BuildContext context) => AsyncSection(
+      title: 'Carta',
+      load: () => api.get('/places/$placeId/menu'),
+      builder: (data) {
+        final images = data['place']?['menuImageUrls'] as List? ?? [];
+        final categories = data['categories'] as List? ?? [];
+        if (images.isEmpty && categories.isEmpty) {
+          return const _EmptyHint(
+              icon: Icons.menu_book_outlined,
+              text: 'Todavía no hay carta disponible.');
+        }
+        return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final url in images)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: InkWell(
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => Scaffold(
+                            appBar: AppBar(title: const Text('Carta')),
+                            body:
+                                InteractiveViewer(child: Image.network(url))))),
+                    child: ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Image.network(url,
+                            height: 200, fit: BoxFit.contain)),
+                  ),
+                ),
+              for (final category in categories)
+                ExpansionTile(
+                    initiallyExpanded: true,
+                    tilePadding: EdgeInsets.zero,
+                    shape: const Border(),
+                    collapsedShape: const Border(),
+                    title: Text('${category['name']}',
+                        style: AppText.bodyLg
+                            .copyWith(fontWeight: FontWeight.w600)),
+                    children: [
+                      for (final dish in category['dishes'] ?? [])
+                        ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title:
+                                Text('${dish['name']}', style: AppText.bodyLg),
+                            subtitle: Text(
+                                [
+                                  dish['description'],
+                                  if ((dish['ingredients'] as List? ?? [])
+                                      .isNotEmpty)
+                                    'Ingredientes: ${(dish['ingredients'] as List).join(', ')}',
+                                  if ((dish['allergens'] as List? ?? [])
+                                      .isNotEmpty)
+                                    'Alérgenos: ${(dish['allergens'] as List).join(', ')}',
+                                  if (dish['isAvailable'] == false)
+                                    'No disponible'
+                                ].whereType<String>().join('\n'),
+                                style: AppText.bodyMd),
+                            trailing: Text('S/ ${dish['price'] ?? '-'}',
+                                style: AppText.bodyMd.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w700)))
+                    ]),
+            ]);
+      });
+}
+
+/// Valoraciones (distribución de estrellas) de la pestaña Reseñas.
+class PlaceRatings extends StatelessWidget {
+  final String placeId;
+  final ApiClient api;
+  const PlaceRatings({super.key, required this.placeId, required this.api});
+
+  @override
+  Widget build(BuildContext context) => AsyncSection(
+      title: 'Valoraciones',
+      load: () => api.get('/places/$placeId/rating-distribution'),
+      builder: (data) => _RatingBreakdown(rows: data as List));
+}
+
+class _PromoTile extends StatelessWidget {
+  final dynamic promo;
+  const _PromoTile({required this.promo});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: _SectionBox(
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Icon(Icons.local_offer_rounded,
+                size: 18, color: AppColors.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${promo['title']}',
+                        style: AppText.bodyLg
+                            .copyWith(fontWeight: FontWeight.w600)),
+                    if ((promo['description'] ?? '').toString().isNotEmpty)
+                      Text('${promo['description']}', style: AppText.bodyMd),
+                  ]),
+            ),
+          ]),
+        ),
+      );
 }
 
 String _initial(String name) {
@@ -521,8 +524,7 @@ class _RatingBreakdown extends StatelessWidget {
                   SizedBox(
                       width: 10,
                       child: Text('$star',
-                          style: AppText.labelMd,
-                          textAlign: TextAlign.right)),
+                          style: AppText.labelMd, textAlign: TextAlign.right)),
                   const SizedBox(width: 3),
                   const Icon(Icons.star_rounded,
                       size: 11, color: AppColors.amber),
@@ -541,8 +543,7 @@ class _RatingBreakdown extends StatelessWidget {
                   SizedBox(
                       width: 26,
                       child: Text('${counts[star]}',
-                          style: AppText.labelMd,
-                          textAlign: TextAlign.right)),
+                          style: AppText.labelMd, textAlign: TextAlign.right)),
                 ]),
               ),
           ]),
