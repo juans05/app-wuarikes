@@ -77,8 +77,12 @@ extension NowApi on ApiClient {
   Future<NowPost> unreactNow(String id) async => NowPost.fromJson(
       await delete('/now/posts/$id/reaction') as Map<String, dynamic>);
 
+  /// El backend acepta hasta 200 caracteres de motivo (si no, 400): se recorta.
   Future<void> reportNow(String id, String reason) async {
-    await post('/now/posts/$id/report', {'reason': reason});
+    final trimmed = reason.trim();
+    await post('/now/posts/$id/report', {
+      'reason': trimmed.length > 200 ? trimmed.substring(0, 200) : trimmed,
+    });
   }
 
   /// [scope]: 'following' | 'nearby' | 'friends'. 'nearby' exige [lat]/[lng].

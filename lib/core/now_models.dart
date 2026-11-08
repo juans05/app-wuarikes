@@ -131,3 +131,45 @@ class NowArea {
             .toList(),
       );
 }
+
+/// "Cerca" de Ahora: radio en metros para dar ✅ (el backend aplica el mismo).
+const nowRadiusMeters = 300;
+
+/// ¿Se puede dar ✅ estando a [distanceMeters] de la publicación?
+bool canConfirm(double distanceMeters) => distanceMeters <= nowRadiusMeters;
+
+/// "quedan 19 h"; bajo 1 h, "quedan 25 min"; sin vida, "venció".
+String timeLeftLabel(Duration left) {
+  if (left <= Duration.zero) return 'venció';
+  if (left.inHours >= 1) return 'quedan ${left.inHours} h';
+  return 'quedan ${left.inMinutes < 1 ? 1 : left.inMinutes} min';
+}
+
+/// "termina 23:59" si acaba hoy; si no, "termina 08/11".
+String promoEndsLabel(DateTime until, DateTime now) {
+  String two(int n) => n.toString().padLeft(2, '0');
+  final local = until.toLocal();
+  final today = local.year == now.year &&
+      local.month == now.month &&
+      local.day == now.day;
+  return today
+      ? 'termina ${two(local.hour)}:${two(local.minute)}'
+      : 'termina ${two(local.day)}/${two(local.month)}';
+}
+
+/// Tipo MIME para subir [filename]: el [declared] por el selector si lo hay
+/// (en Android casi nunca viene) y, si no, el de la extensión. El backend
+/// acepta jpeg/png/webp y mp4/quicktime según el tipo que declare el archivo.
+String nowMimeType(String filename, {required bool video, String? declared}) {
+  if (declared != null && declared.isNotEmpty) return declared;
+  final dot = filename.lastIndexOf('.');
+  final ext = dot < 0 ? '' : filename.substring(dot + 1).toLowerCase();
+  return switch (ext) {
+    'png' => 'image/png',
+    'webp' => 'image/webp',
+    'jpg' || 'jpeg' => 'image/jpeg',
+    'mov' => 'video/quicktime',
+    'mp4' => 'video/mp4',
+    _ => video ? 'video/mp4' : 'image/jpeg',
+  };
+}

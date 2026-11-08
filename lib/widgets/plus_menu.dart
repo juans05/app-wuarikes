@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
+import '../screens/now/publish_now_sheet.dart';
 import '../screens/register_place_screen.dart';
 
 enum _PlusAction { publish, suggest }
@@ -34,12 +35,6 @@ Future<void> showPlusMenu(BuildContext context, {BuildContext? anchor}) async {
         MaterialPageRoute(builder: (_) => const RegisterPlaceScreen()),
       );
   }
-}
-
-// TODO(Task 9): reemplazar por la hoja de publicar
-void showPublishNowSheet(BuildContext context) {
-  ScaffoldMessenger.of(context)
-      .showSnackBar(const SnackBar(content: Text('Muy pronto')));
 }
 
 class _PlusMenu extends StatelessWidget {

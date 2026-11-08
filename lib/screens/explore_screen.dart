@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -9,6 +11,8 @@ import '../core/app_theme.dart';
 import '../core/map_config.dart';
 import '../core/marker_builder.dart';
 import '../core/models.dart';
+import '../core/now_api.dart';
+import '../core/now_models.dart';
 import '../core/place_image.dart';
 import '../state/auth_provider.dart';
 import '../widgets/explore_bottom_list.dart';
@@ -18,6 +22,8 @@ import 'filter_screen.dart';
 import 'place_detail_screen.dart';
 import 'search_results_screen.dart';
 import 'discovery_screen.dart';
+import 'now/now_layer.dart';
+import 'now/now_post_screen.dart';
 
 /// Default map center: Miraflores, Lima — used until the user's location
 /// resolves (or if location permission is denied).
@@ -46,9 +52,17 @@ class _ExploreScreenState extends State<ExploreScreen> {
   final MapController _mapController = MapController();
 
   /// Locales o Ahora. En `now` Explorar sigue mostrando el mapa y la lista de
-  /// locales: la capa Ahora (pines, franja "Hoy cerca de ti") se engancha en
-  /// los puntos marcados "AHORA" de [build].
+  /// locales, y suma la capa Ahora: pines y franja "Hoy cerca de ti" con lo de
+  /// la zona visible del mapa.
   ExploreMode _mode = ExploreMode.places;
+
+  /// Lo último que llegó de Ahora para la zona visible (null: aún nada).
+  NowArea? _nowArea;
+
+  /// Número de la última carga de Ahora: una respuesta con otro número es vieja
+  /// (el mapa ya se movió, o se salió de Ahora) y se descarta.
+  int _nowRequest = 0;
+  Timer? _nowDebounce;
 
   /// Alto actual de la lista deslizable (fracción 0..1), para subir el botón
   /// "mi ubicación" junto con ella.
@@ -105,6 +119,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   @override
   void dispose() {
+    _nowDebounce?.cancel();
+    nowPostPublished.removeListener(_onNowPublished);
     ApiClient.checkinCreated.removeListener(_loadStats);
     _sheetExtent.dispose();
     super.dispose();
@@ -115,6 +131,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     super.initState();
     _loadStats();
     ApiClient.checkinCreated.addListener(_loadStats);
+    nowPostPublished.addListener(_onNowPublished);
     _api
         .getCategories()
         .then((c) => mounted ? setState(() => _categories = c) : null)
@@ -246,16 +263,26 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   void _buildMarkers() {
     final markers = <Marker>[];
+    final small = _mode == ExploreMode.now;
     for (final place in _places) {
       if (place.latitude == null || place.longitude == null) continue;
-      markers.add(Marker(
-        point: LatLng(place.latitude!, place.longitude!),
-        alignment: Alignment.topCenter,
-        width: 44,
-        height: 56,
-        child: MapPin(
-            imageUrl: place.coverImageUrl, onTap: () => _openPlace(place)),
-      ));
+      markers.add(small
+          // En Ahora los locales se ven chicos para no tapar lo de la gente.
+          ? Marker(
+              point: LatLng(place.latitude!, place.longitude!),
+              width: 30,
+              height: 30,
+              child: SmallPlacePin(onTap: () => _openPlace(place)),
+            )
+          : Marker(
+              point: LatLng(place.latitude!, place.longitude!),
+              alignment: Alignment.topCenter,
+              width: 44,
+              height: 56,
+              child: MapPin(
+                  imageUrl: place.coverImageUrl,
+                  onTap: () => _openPlace(place)),
+            ));
     }
     if (mounted) setState(() => _markers = markers);
   }
@@ -343,6 +370,74 @@ class _ExploreScreenState extends State<ExploreScreen> {
         builder: (_) => PlaceDetailScreen(placeId: place.id)));
   }
 
+  void _openNowPost(NowPost post) {
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => NowPostScreen(postId: post.id, api: _api)));
+  }
+
+  void _openNowPromo(NowPromo promo) {
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => PlaceDetailScreen(placeId: promo.placeId)));
+  }
+
+  /// Locales u Ahora. Al entrar a Ahora se carga la zona visible; al salir se
+  /// descarta cualquier carga en vuelo. Locales no se recarga al mover el mapa.
+  void _setMode(ExploreMode mode) {
+    setState(() => _mode = mode);
+    _buildMarkers();
+    if (mode == ExploreMode.now) {
+      _loadNow();
+    } else {
+      _nowDebounce?.cancel();
+      _nowRequest++;
+    }
+  }
+
+  /// El mapa se movió: en Ahora se vuelve a pedir la zona (con espera de 400 ms
+  /// para no pedir en cada cuadro del gesto); en Locales no pasa nada.
+  void _onMapMoved() {
+    if (_mode != ExploreMode.now) return;
+    _nowDebounce?.cancel();
+    _nowDebounce = Timer(const Duration(milliseconds: 400), _loadNow);
+  }
+
+  Future<void> _loadNow() async {
+    if (_mode != ExploreMode.now || !_mapReady) return;
+    final request = ++_nowRequest;
+    final bounds = _mapController.camera.visibleBounds;
+    try {
+      final area = await _api.getNowArea(
+        minLat: bounds.south.clamp(-90.0, 90.0),
+        minLng: bounds.west.clamp(-180.0, 180.0),
+        maxLat: bounds.north.clamp(-90.0, 90.0),
+        maxLng: bounds.east.clamp(-180.0, 180.0),
+      );
+      if (!mounted || request != _nowRequest) return;
+      setState(() => _nowArea = area);
+    } catch (_) {
+      if (!mounted || request != _nowRequest) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+            content: Text('No se pudo cargar lo que pasa ahora')));
+    }
+  }
+
+  /// Se publicó algo: se pasa a Ahora, el mapa va a donde quedó si no se veía,
+  /// y se recarga la zona para que aparezca.
+  void _onNowPublished() {
+    final post = nowPostPublished.value;
+    if (post == null || !mounted) return;
+    _setMode(ExploreMode.now);
+    if (_mapReady) {
+      final point = LatLng(post.latitude, post.longitude);
+      if (!_mapController.camera.visibleBounds.contains(point)) {
+        _mapController.move(point, _mapController.camera.zoom);
+      }
+    }
+    _loadNow();
+  }
+
   void _openDiscovery() {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const DiscoveryScreen()));
@@ -379,15 +474,22 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     _mapController.move(
                         LatLng(_position!.latitude, _position!.longitude), 15);
                   }
+                  _loadNow();
                 },
+                onPositionChanged: (_, __) => _onMapMoved(),
                 interactionOptions: const InteractionOptions(
                     flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
               ),
               children: [
                 buildMapboxTileLayer(),
-                // AHORA (Task 9): aquí, antes de los pines de locales, va la
-                // capa de pines de _mode == ExploreMode.now.
                 MarkerLayer(markers: _markers),
+                // Ahora: sobre los locales (que aquí van chicos), porque la
+                // promo de un local queda justo en el punto de su pin.
+                if (_mode == ExploreMode.now && _nowArea != null)
+                  NowPinsLayer(
+                      area: _nowArea!,
+                      onPostTap: _openNowPost,
+                      onPromoTap: _openNowPromo),
                 if (_position != null)
                   MarkerLayer(markers: [
                     Marker(
@@ -426,11 +528,19 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       _ProfileAvatar(onTap: widget.onOpenProfile),
                     ]),
                     const SizedBox(height: 8),
-                    ModeSwitch(
-                        value: _mode,
-                        onChanged: (m) => setState(() => _mode = m)),
-                    // AHORA (Task 9): la franja "Hoy cerca de ti" va aquí
-                    // cuando _mode == ExploreMode.now.
+                    ModeSwitch(value: _mode, onChanged: _setMode),
+                    if (_mode == ExploreMode.now) ...[
+                      const SizedBox(height: 8),
+                      NowStrip(
+                        area: _nowArea,
+                        distanceTo: (lat, lng) => _position == null
+                            ? null
+                            : Geolocator.distanceBetween(_position!.latitude,
+                                _position!.longitude, lat, lng),
+                        onPostTap: _openNowPost,
+                        onPromoTap: _openNowPromo,
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     SizedBox(
                       height: 40,

@@ -91,4 +91,86 @@ void main() {
     });
     expect(p.id, 'post-1');
   });
+
+  test('createNowPost con archivo va como multipart: campos, parte file y Authorization',
+      () async {
+    SharedPreferences.setMockInitialValues({'wuarikes_access_token': 'tok-1'});
+    http.BaseRequest? seen;
+    var body = '';
+    // request.send() usa el cliente de la zona, no el del ApiClient.
+    final p = await http.runWithClient(
+        () => ApiClient().createNowPost(
+              kind: 'photo',
+              text: ' Cola larga ',
+              visibility: 'followers',
+              latitude: -12.046,
+              longitude: -77.042,
+              bytes: const [1, 2, 3],
+              filename: 'cola.png',
+              mimeType: 'image/png',
+            ),
+        () => MockClient.streaming((req, bodyStream) async {
+              seen = req;
+              body = await bodyStream.bytesToString();
+              return http.StreamedResponse(
+                  Stream.value(utf8.encode(jsonEncode(_post()))), 201,
+                  headers: {'content-type': 'application/json; charset=utf-8'});
+            }));
+
+    expect(seen!.method, 'POST');
+    expect(seen!.url.path, '/api/now/posts');
+    expect(seen!.headers['Authorization'], 'Bearer tok-1');
+    expect(seen!.headers['content-type'], startsWith('multipart/form-data'));
+    for (final field in {
+      'kind': 'photo',
+      'text': 'Cola larga',
+      'visibility': 'followers',
+      'latitude': '-12.046',
+      'longitude': '-77.042',
+    }.entries) {
+      expect(body, contains('name="${field.key}"\r\n\r\n${field.value}\r\n'),
+          reason: field.key);
+    }
+    expect(body, contains('name="file"; filename="cola.png"'));
+    expect(body, contains('content-type: image/png'));
+    expect(p.id, 'post-1');
+  });
+
+  test('createNowPost multipart sin texto no manda el campo text', () async {
+    var body = '';
+    await http.runWithClient(
+        () => ApiClient().createNowPost(
+              kind: 'video',
+              visibility: 'all',
+              latitude: -12.0,
+              longitude: -77.0,
+              bytes: const [1],
+              filename: 'clip.mov',
+              mimeType: 'video/quicktime',
+            ),
+        () => MockClient.streaming((req, bodyStream) async {
+              body = await bodyStream.bytesToString();
+              return http.StreamedResponse(
+                  Stream.value(utf8.encode(jsonEncode(_post()))), 201,
+                  headers: {'content-type': 'application/json; charset=utf-8'});
+            }));
+
+    expect(body, isNot(contains('name="text"')));
+    expect(body, contains('content-type: video/quicktime'));
+  });
+
+  test('reportNow recorta el motivo a 200 caracteres', () async {
+    late http.Request seen;
+    final api = ApiClient(
+        client: MockClient((req) async {
+      seen = req;
+      return http.Response('{"ok":true}', 201);
+    }));
+
+    await api.reportNow('post-1', '  ${'a' * 250}  ');
+
+    expect(seen.method, 'POST');
+    expect(seen.url.path, '/api/now/posts/post-1/report');
+    expect((jsonDecode(seen.body) as Map)['reason'], 'a' * 200);
+  });
 }

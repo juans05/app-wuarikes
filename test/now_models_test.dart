@@ -122,4 +122,40 @@ void main() {
     expect(area.posts.single.id, 'post-1');
     expect(area.promos, isEmpty);
   });
+
+  test('canConfirm es true hasta 300 m y false desde 301', () {
+    expect(canConfirm(0), isTrue);
+    expect(canConfirm(299.9), isTrue);
+    expect(canConfirm(300), isTrue);
+    expect(canConfirm(300.5), isFalse);
+    expect(canConfirm(301), isFalse);
+  });
+
+  test('timeLeftLabel: horas, minutos si falta menos de 1 h, y vencida', () {
+    expect(timeLeftLabel(const Duration(hours: 19, minutes: 40)), 'quedan 19 h');
+    expect(timeLeftLabel(const Duration(hours: 1)), 'quedan 1 h');
+    expect(timeLeftLabel(const Duration(minutes: 59, seconds: 30)),
+        'quedan 59 min');
+    expect(timeLeftLabel(const Duration(seconds: 20)), 'quedan 1 min');
+    expect(timeLeftLabel(Duration.zero), 'venció');
+  });
+
+  test('promoEndsLabel: hora si termina hoy, fecha si es otro día', () {
+    final now = DateTime(2026, 11, 7, 10);
+    expect(promoEndsLabel(DateTime(2026, 11, 7, 23, 59), now),
+        'termina 23:59');
+    expect(promoEndsLabel(DateTime(2026, 11, 8, 3, 5), now), 'termina 08/11');
+  });
+
+  test('nowMimeType usa el tipo real del archivo y cae a la extensión', () {
+    expect(nowMimeType('a.png', video: false), 'image/png');
+    expect(nowMimeType('a.JPG', video: false), 'image/jpeg');
+    expect(nowMimeType('a.webp', video: false), 'image/webp');
+    expect(nowMimeType('clip.mov', video: true), 'video/quicktime');
+    expect(nowMimeType('clip.mp4', video: true), 'video/mp4');
+    expect(nowMimeType('sin_extension', video: false), 'image/jpeg');
+    expect(nowMimeType('sin_extension', video: true), 'video/mp4');
+    expect(nowMimeType('a.png', video: false, declared: 'image/webp'),
+        'image/webp');
+  });
 }
