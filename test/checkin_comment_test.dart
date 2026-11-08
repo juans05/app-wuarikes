@@ -134,6 +134,26 @@ void main() {
       final c = buildCheckinComment(checkinChips, 'x' * checkinTextMax);
       expect(c.length, lessThanOrEqualTo(200));
     });
+
+    test('cutUtf16 no parte un emoji y respeta el tope en unidades UTF-16', () {
+      expect(cutUtf16('abc', 5), 'abc');
+      expect(cutUtf16('abcde', 5), 'abcde');
+      expect(cutUtf16('abcdef', 5), 'abcde');
+      // El tope cae en medio de un emoji (2 unidades): se quita entero.
+      expect(cutUtf16('abcd😋', 5), 'abcd');
+      expect(cutUtf16('abc😋', 5), 'abc😋');
+    });
+
+    test('con emojis el comentario enviado nunca pasa de 200 unidades', () {
+      // TextField.maxLength cuenta caracteres: 140 emojis son 280 unidades.
+      final full = buildCheckinComment(checkinChips, '😋' * checkinTextMax);
+      expect(full.length, greaterThan(checkinCommentMax));
+      final c = cutUtf16(full, checkinCommentMax);
+      expect(c.length, lessThanOrEqualTo(checkinCommentMax));
+      final last = c.codeUnitAt(c.length - 1);
+      expect(last >= 0xD800 && last <= 0xDBFF, isFalse); // sin mitad suelta
+      expect(full.startsWith(c), isTrue);
+    });
   });
 
   test('puntos: 10, y 5 más con foto (los del backend)', () {
@@ -198,6 +218,29 @@ void main() {
       expect(body['isMocked'], false);
     });
 
+    testWidgets('con emojis el comentario enviado no pasa de 200 unidades',
+        (tester) async {
+      final fake = _Fake();
+      await _pump(tester, fake);
+
+      for (final c in checkinChips) {
+        await _tap(tester, find.text(c));
+      }
+      await tester.enterText(
+          find.widgetWithText(TextField, 'Cuéntale a la comunidad… (opcional)'),
+          '😋' * checkinTextMax);
+      await _publish(tester);
+
+      final sent = fake.checkinBody['comment'] as String;
+      expect(sent.length, lessThanOrEqualTo(checkinCommentMax));
+      final last = sent.codeUnitAt(sent.length - 1);
+      expect(last >= 0xD800 && last <= 0xDBFF, isFalse);
+      expect(
+          sent,
+          cutUtf16(buildCheckinComment(checkinChips, '😋' * checkinTextMax),
+              checkinCommentMax));
+    });
+
     testWidgets('sin chips ni texto no manda comentario, como antes',
         (tester) async {
       final fake = _Fake();
@@ -216,7 +259,7 @@ void main() {
       final fake = _Fake();
       await _pump(tester, fake);
 
-      expect(find.widgetWithText(TextField, '¿Qué pediste? (opcional)'),
+      expect(find.widgetWithText(TextField, 'Escribe el plato (opcional)'),
           findsNothing);
       await _tap(tester, find.text('Ceviche clásico'));
       expect(_on(tester, 'Ceviche clásico'), isTrue);
@@ -224,7 +267,7 @@ void main() {
       await _tap(tester, find.text('+ Otro'));
       expect(_on(tester, 'Ceviche clásico'), isFalse);
       await tester.enterText(
-          find.widgetWithText(TextField, '¿Qué pediste? (opcional)'),
+          find.widgetWithText(TextField, 'Escribe el plato (opcional)'),
           'Arroz con mariscos');
       await _publish(tester);
 
@@ -237,8 +280,10 @@ void main() {
       await _pump(tester, fake, place: _place(dishes: const []));
 
       expect(find.text('+ Otro'), findsNothing);
+      expect(find.text('¿Qué pediste?'), findsOneWidget); // un solo título
       await tester.enterText(
-          find.widgetWithText(TextField, '¿Qué pediste? (opcional)'), 'Lomo');
+          find.widgetWithText(TextField, 'Escribe el plato (opcional)'),
+          'Lomo');
       await _publish(tester);
 
       expect(fake.checkinBody['dishName'], 'Lomo');

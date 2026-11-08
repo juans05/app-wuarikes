@@ -24,6 +24,20 @@ int checkinPoints({required bool hasPhoto}) =>
 /// (`CreateCheckinDto`); con los 4 chips (55) y el " — " (3) sobran 142.
 const checkinTextMax = 140;
 
+/// Tope del comentario en el backend (`@MaxLength(200)`), que cuenta unidades
+/// UTF-16 (como `String.length`), no caracteres: un emoji vale 2.
+const checkinCommentMax = 200;
+
+/// Corta [s] a [max] unidades UTF-16 sin partir un emoji: si la última unidad
+/// que queda es la mitad alta de un par sustituto, la quita también.
+String cutUtf16(String s, int max) {
+  if (s.length <= max) return s;
+  var end = max;
+  final last = s.codeUnitAt(end - 1);
+  if (last >= 0xD800 && last <= 0xDBFF) end--;
+  return s.substring(0, end);
+}
+
 /// El comentario que se envía: los chips van como texto al inicio, sin columna
 /// nueva: `"😋 Rico · 💸 Buen precio — {texto}"`.
 String buildCheckinComment(List<String> chips, String text) {
@@ -85,7 +99,7 @@ class _NewCheckinScreenState extends State<NewCheckinScreen> {
     final file = await (widget.pickPhoto?.call() ??
         ImagePicker().pickImage(
             source: ImageSource.gallery, imageQuality: 80, maxWidth: 1600));
-    if (file != null) setState(() => _photo = file);
+    if (file != null && mounted) setState(() => _photo = file);
   }
 
   /// Los platos del local (los de su ficha), sin repetir.
@@ -99,7 +113,7 @@ class _NewCheckinScreenState extends State<NewCheckinScreen> {
   String get _dishName {
     final typed = _otro || _dishes.isEmpty;
     final name = (typed ? _dishCtrl.text : _dish ?? '').trim();
-    return name.length > 100 ? name.substring(0, 100) : name; // tope del DTO
+    return cutUtf16(name, 100); // tope del DTO
   }
 
   /// Los chips elegidos, siempre en el mismo orden.
@@ -149,7 +163,8 @@ class _NewCheckinScreenState extends State<NewCheckinScreen> {
         latitude: position.latitude,
         longitude: position.longitude,
         rating: _rating == 0 ? null : _rating,
-        comment: buildCheckinComment(_picked, _commentCtrl.text),
+        comment: cutUtf16(
+            buildCheckinComment(_picked, _commentCtrl.text), checkinCommentMax),
         photoUrl: photoUrl,
         dishName: _dishName,
         dishPrice: price,
@@ -278,12 +293,14 @@ class _NewCheckinScreenState extends State<NewCheckinScreen> {
                             _dishCtrl.clear();
                           })),
               ]),
-              if (showDishField)
+              if (showDishField) ...[
+                const SizedBox(height: 8),
                 TextField(
                     controller: _dishCtrl,
                     maxLength: 100,
                     decoration: const InputDecoration(
-                        labelText: '¿Qué pediste? (opcional)')),
+                        hintText: 'Escribe el plato (opcional)')),
+              ],
               TextField(
                   controller: _priceCtrl,
                   keyboardType:
@@ -376,7 +393,7 @@ class _NewCheckinScreenState extends State<NewCheckinScreen> {
         selected: on,
         showCheckmark: false,
         onSelected: (_) => onTap(),
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.surfaceContainerLowest,
         selectedColor: AppColors.onSurface,
         side: BorderSide(color: on ? AppColors.onSurface : AppColors.border),
         shape: const StadiumBorder(),
