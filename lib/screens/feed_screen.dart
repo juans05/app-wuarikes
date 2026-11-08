@@ -196,18 +196,19 @@ class _FeedScreenState extends State<FeedScreen> {
       if (!mounted || gen != _gen) return;
 
       final failed = (wantCk && ck == null) || (wantPosts && posts == null);
-      final allFailed =
-          (wantCk || wantPosts) && (!wantCk || ck == null) && (!wantPosts || posts == null);
+      final allFailed = (wantCk || wantPosts) &&
+          (!wantCk || ck == null) &&
+          (!wantPosts || posts == null);
       setState(() {
         if (ck != null) {
           if (reset) _checkins.clear();
-          _checkins.addAll(ck.data);
+          _append(_checkins, ck.data, (c) => c.id);
           _ckPage = ckPage;
           _ckMore = ckPage < ck.totalPages;
         }
         if (posts != null) {
           if (reset) _posts.clear();
-          _posts.addAll(posts.data);
+          _append(_posts, posts.data, (p) => p.id);
           _postPage = postPage;
           _postMore = postPage < posts.totalPages;
         }
@@ -217,6 +218,13 @@ class _FeedScreenState extends State<FeedScreen> {
     } finally {
       if (mounted && gen == _gen) setState(() => _loading = false);
     }
+  }
+
+  /// Agrega [more] a [list] sin repetir ids: si entre una página y la siguiente
+  /// entra algo nuevo, el servidor corre los límites y repite elementos.
+  void _append<T>(List<T> list, Iterable<T> more, String Function(T) id) {
+    final seen = {for (final e in list) id(e)};
+    list.addAll(more.where((e) => seen.add(id(e))));
   }
 
   void _select(_Scope scope) {
@@ -275,7 +283,8 @@ class _FeedScreenState extends State<FeedScreen> {
       };
 
   String get _loginText => switch (_scope) {
-        _Scope.following => 'Inicia sesión para ver lo que publican quienes sigues',
+        _Scope.following =>
+          'Inicia sesión para ver lo que publican quienes sigues',
         _Scope.nearby => 'Inicia sesión para ver lo que pasa cerca de ti',
         _ => 'Inicia sesión para ver lo que publican tus amigos',
       };
@@ -287,11 +296,18 @@ class _FeedScreenState extends State<FeedScreen> {
     // Siguiendo mezcla por fecha; el resto va como lo ordena el servidor
     // (Todos y reseñas de un local traen su propio orden: más reciente, mejor
     // puntuación...).
+    // Una publicación que venció mientras la pantalla estaba abierta ya no se
+    // muestra (el servidor tampoco la mandaría al refrescar).
+    final now = DateTime.now();
+    final live = [
+      for (final p in _posts)
+        if (p.expiresAt.isAfter(now)) p
+    ];
     final entries = _scope == _Scope.following
-        ? mergeFeed(_checkins, _posts)
+        ? mergeFeed(_checkins, live)
         : <FeedEntry>[
             for (final c in _checkins) CheckinEntry(c),
-            for (final p in _posts) PostEntry(p),
+            for (final p in live) PostEntry(p),
           ];
     return Scaffold(
       appBar: AppBar(
@@ -314,6 +330,7 @@ class _FeedScreenState extends State<FeedScreen> {
                         label: Text(s.label),
                         selected: s == _scope,
                         showCheckmark: false,
+                        visualDensity: VisualDensity.compact,
                         selectedColor: AppColors.primaryContainer,
                         backgroundColor: Colors.white,
                         side: BorderSide(
@@ -392,7 +409,10 @@ class _FeedScreenState extends State<FeedScreen> {
                     padding: const EdgeInsets.all(24), child: Text(_emptyText)),
               if (!_loading && !_noLocation && (_more || _error != null))
                 TextButton(
-                    onPressed: () => _load(reset: _error != null),
+                    // Con la lista vacía se empieza de cero; con elementos se reintenta
+                    // la página que falló, sin tirar lo que ya se ve.
+                    onPressed: () =>
+                        _load(reset: _error != null && entries.isEmpty),
                     child: Text(_error != null ? 'Reintentar' : 'Cargar más')),
             ],
           ])),
@@ -451,76 +471,72 @@ class _NowCard extends StatelessWidget {
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(14),
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: AppColors.secondary,
-                      backgroundImage: avatar != null && avatar.isNotEmpty
-                          ? CachedNetworkImageProvider(avatar)
-                          : null,
-                      child: avatar == null || avatar.isEmpty
-                          ? const Icon(Icons.person,
-                              size: 16, color: Colors.white)
-                          : null,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(author.isEmpty ? 'Usuario' : '@$author',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.bodyLg
-                              .copyWith(fontWeight: FontWeight.w600)),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                          color: AppColors.primaryContainer,
-                          borderRadius: BorderRadius.circular(8)),
-                      child: Text(
-                          '⚡ ${timeLeftLabel(post.timeLeft(DateTime.now()))}',
-                          style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary)),
-                    ),
-                  ]),
-                  if (media != null && media.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: SizedBox(
-                        height: 160,
-                        width: double.infinity,
-                        child: post.kind == 'video'
-                            // La miniatura de un video no se puede pintar como imagen.
-                            ? Container(
-                                color: AppColors.primaryContainer,
-                                child: const Icon(
-                                    Icons.play_circle_outline_rounded,
-                                    size: 44,
-                                    color: AppColors.primary))
-                            : Image.network(media,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                    color: AppColors.surface,
-                                    child: const Icon(Icons.broken_image,
-                                        color: AppColors.onSurfaceVariant))),
-                      ),
-                    ),
-                  ],
-                  if (text.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text(text,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.bodyLg),
-                  ],
-                ]),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: AppColors.secondary,
+                  backgroundImage: avatar != null && avatar.isNotEmpty
+                      ? CachedNetworkImageProvider(avatar)
+                      : null,
+                  child: avatar == null || avatar.isEmpty
+                      ? const Icon(Icons.person, size: 16, color: Colors.white)
+                      : null,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(author.isEmpty ? 'Usuario' : '@$author',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          AppText.bodyLg.copyWith(fontWeight: FontWeight.w600)),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                      color: AppColors.primaryContainer,
+                      borderRadius: BorderRadius.circular(8)),
+                  child: Text(
+                      '⚡ ${timeLeftLabel(post.timeLeft(DateTime.now()))}',
+                      style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary)),
+                ),
+              ]),
+              if (media != null && media.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: SizedBox(
+                    height: 160,
+                    width: double.infinity,
+                    child: post.kind == 'video'
+                        // La miniatura de un video no se puede pintar como imagen.
+                        ? Container(
+                            color: AppColors.primaryContainer,
+                            child: const Icon(Icons.play_circle_outline_rounded,
+                                size: 44, color: AppColors.primary))
+                        : Image.network(media,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                                color: AppColors.surface,
+                                child: const Icon(Icons.broken_image,
+                                    color: AppColors.onSurfaceVariant))),
+                  ),
+                ),
+              ],
+              if (text.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text(text,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.bodyLg),
+              ],
+            ]),
           ),
         ),
       ),
@@ -557,7 +573,8 @@ class _CheckinCard extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               InkWell(
                 onTap: item.userId == null
                     ? null
@@ -566,7 +583,8 @@ class _CheckinCard extends StatelessWidget {
                 child: Text(name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppText.bodyLg.copyWith(fontWeight: FontWeight.w600)),
+                    style:
+                        AppText.bodyLg.copyWith(fontWeight: FontWeight.w600)),
               ),
               if (item.place != null)
                 InkWell(
@@ -596,7 +614,8 @@ class _CheckinCard extends StatelessWidget {
                   color: AppColors.amber.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(20)),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.star_rounded, size: 14, color: AppColors.amber),
+                const Icon(Icons.star_rounded,
+                    size: 14, color: AppColors.amber),
                 const SizedBox(width: 2),
                 Text('${item.rating}',
                     style: AppText.labelMd.copyWith(
@@ -619,8 +638,7 @@ class _CheckinCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20)),
             child: Text(
                 '${item.dishName}${item.dishPrice == null ? '' : ' · S/ ${item.dishPrice}'}',
-                style: AppText.labelMd
-                    .copyWith(color: AppColors.onSurface)),
+                style: AppText.labelMd.copyWith(color: AppColors.onSurface)),
           ),
         ],
         if (item.photoUrl != null) ...[
@@ -649,10 +667,7 @@ class _CheckinCard extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(
-                    item.isLikedByMe
-                        ? Icons.favorite
-                        : Icons.favorite_border,
+                Icon(item.isLikedByMe ? Icons.favorite : Icons.favorite_border,
                     size: 18,
                     color: item.isLikedByMe
                         ? AppColors.primary
@@ -668,8 +683,10 @@ class _CheckinCard extends StatelessWidget {
           IconButton(
               tooltip: 'Compartir',
               visualDensity: VisualDensity.compact,
-              onPressed: () => sharePlace(context,
-                  item.place?.id ?? item.placeId, item.place?.name ?? 'Wuarikes'),
+              onPressed: () => sharePlace(
+                  context,
+                  item.place?.id ?? item.placeId,
+                  item.place?.name ?? 'Wuarikes'),
               icon: const Icon(Icons.share_outlined,
                   size: 18, color: AppColors.onSurfaceVariant)),
         ]),

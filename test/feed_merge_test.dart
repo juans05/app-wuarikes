@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -27,7 +28,9 @@ Map<String, dynamic> _checkinJson(String id, DateTime at,
     };
 
 Map<String, dynamic> _postJson(String id, DateTime at,
-        {String text = 'Feria en el parque', String author = 'Maritza'}) =>
+        {String text = 'Feria en el parque',
+        String author = 'Maritza',
+        Duration life = const Duration(hours: 19, minutes: 30)}) =>
     {
       'id': id,
       'kind': 'text',
@@ -39,10 +42,7 @@ Map<String, dynamic> _postJson(String id, DateTime at,
       'likes': 3,
       'dislikes': 1,
       'checks': 2,
-      'expiresAt': DateTime.now()
-          .add(const Duration(hours: 19, minutes: 30))
-          .toUtc()
-          .toIso8601String(),
+      'expiresAt': DateTime.now().add(life).toUtc().toIso8601String(),
       'createdAt': at.toUtc().toIso8601String(),
       'author': {'id': 'a-1', 'fullName': author, 'avatarUrl': null},
       'myReaction': null,
@@ -123,7 +123,7 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 100));
 }
 
-Future<void> _pump(WidgetTester tester, _Fake fake,
+Future<void> _pump(WidgetTester tester, ApiClient api,
     {AuthProvider? auth,
     Future<Position?> Function()? locate,
     String? placeId,
@@ -135,7 +135,7 @@ Future<void> _pump(WidgetTester tester, _Fake fake,
     value: auth ?? _auth(),
     child: MaterialApp(
       home: FeedScreen(
-          api: fake.api,
+          api: api,
           locate: locate ?? () async => null,
           placeId: placeId,
           history: history),
@@ -169,27 +169,39 @@ void main() {
         ],
       );
 
-      expect(merged.map((e) => switch (e) {
-            CheckinEntry(:final item) => item.id,
-            PostEntry(:final post) => post.id,
-          }), ['p-nuevo', 'c-medio', 'p-medio', 'c-viejo']);
-      expect(merged.map((e) => e.at).toList(),
-          orderedEquals([...merged.map((e) => e.at)]..sort((a, b) => b.compareTo(a))));
+      expect(
+          merged.map((e) => switch (e) {
+                CheckinEntry(:final item) => item.id,
+                PostEntry(:final post) => post.id,
+              }),
+          ['p-nuevo', 'c-medio', 'p-medio', 'c-viejo']);
+      expect(
+          merged.map((e) => e.at).toList(),
+          orderedEquals(
+              [...merged.map((e) => e.at)]..sort((a, b) => b.compareTo(a))));
     });
 
-    test('a igual fecha conserva el orden de entrada (check-ins primero)', () {
+    test('a igual fecha conserva el orden de entrada (40 iguales)', () {
+      // Más de 32 elementos: ahí `List.sort` deja de ser estable por sí solo.
       final merged = mergeFeed(
-        [_checkin('c1', t), _checkin('c2', t)],
-        [_post('p1', t), _post('p2', t)],
+        [for (var i = 0; i < 20; i++) _checkin('c$i', t)],
+        [for (var i = 0; i < 20; i++) _post('p$i', t)],
       );
 
-      expect(merged.map((e) => e is CheckinEntry ? e.item.id : (e as PostEntry).post.id),
-          ['c1', 'c2', 'p1', 'p2']);
+      expect(merged, hasLength(40));
+      expect(
+          merged.map(
+              (e) => e is CheckinEntry ? e.item.id : (e as PostEntry).post.id),
+          [
+            for (var i = 0; i < 20; i++) 'c$i',
+            for (var i = 0; i < 20; i++) 'p$i',
+          ]);
     });
 
     test('listas vacías y fecha ilegible no rompen', () {
       expect(mergeFeed([], []), isEmpty);
-      final broken = CheckinItem(id: 'c-roto', placeId: 'x', createdAt: 'no-es-fecha');
+      final broken =
+          CheckinItem(id: 'c-roto', placeId: 'x', createdAt: 'no-es-fecha');
       final merged = mergeFeed([broken], [_post('p1', t)]);
       expect(merged.last, isA<CheckinEntry>());
     });
@@ -201,7 +213,7 @@ void main() {
     testWidgets('Cerca de mí sin ubicación avisa y no llama a la API',
         (tester) async {
       final fake = _Fake();
-      await _pump(tester, fake);
+      await _pump(tester, fake.api);
       await _tapScope(tester, 'Cerca de mí');
 
       expect(find.text('Activa tu ubicación para ver lo que pasa cerca'),
@@ -213,7 +225,7 @@ void main() {
         (tester) async {
       final fake = _Fake()
         ..now['nearby'] = [_postJson('p1', t, text: 'Cola larga en el local')];
-      await _pump(tester, fake, locate: () async => _at(-12.05, -77.04));
+      await _pump(tester, fake.api, locate: () async => _at(-12.05, -77.04));
       await _tapScope(tester, 'Cerca de mí');
 
       final calls = fake.calls('/now/feed');
@@ -230,7 +242,7 @@ void main() {
       final fake = _Fake()
         ..checkins = [_checkinJson('c1', t, comment: 'No debe salir aquí')]
         ..now['friends'] = [_postJson('p1', t, text: 'Hay anticuchos')];
-      await _pump(tester, fake);
+      await _pump(tester, fake.api);
       fake.seen.clear();
       await _tapScope(tester, 'Amigos');
 
@@ -241,16 +253,23 @@ void main() {
       expect(find.text('No debe salir aquí'), findsNothing);
     });
 
-    testWidgets('invitado: Amigos y Cerca piden iniciar sesión, sin llamar',
+    testWidgets(
+        'invitado: Siguiendo, Amigos y Cerca piden iniciar sesión, sin llamar',
         (tester) async {
       final fake = _Fake()
         ..checkins = [_checkinJson('c1', t, comment: 'Lo ve el invitado')];
-      await _pump(tester, fake, auth: _auth(loggedIn: false));
+      await _pump(tester, fake.api, auth: _auth(loggedIn: false));
 
       // Hoy el invitado ve el feed general: se conserva.
       expect(find.text('Lo ve el invitado'), findsOneWidget);
       expect(fake.calls('/checkins/feed'), hasLength(1));
       fake.seen.clear();
+
+      await _tapScope(tester, 'Siguiendo');
+      expect(find.text('Inicia sesión para ver lo que publican quienes sigues'),
+          findsOneWidget);
+      expect(find.text('Iniciar sesión'), findsOneWidget);
+      expect(find.text('Lo ve el invitado'), findsNothing);
 
       await _tapScope(tester, 'Amigos');
       expect(find.text('Inicia sesión para ver lo que publican tus amigos'),
@@ -267,7 +286,7 @@ void main() {
         (tester) async {
       final fake = _Fake()
         ..now['following'] = [_postJson('p1', t, text: 'Feria en el parque')];
-      await _pump(tester, fake);
+      await _pump(tester, fake.api);
       await _tapScope(tester, 'Siguiendo');
 
       expect(find.textContaining('⚡ quedan 19 h'), findsOneWidget);
@@ -295,7 +314,7 @@ void main() {
           _postJson('p1', t.subtract(const Duration(hours: 3)),
               text: 'Post del medio'),
         ];
-      await _pump(tester, fake);
+      await _pump(tester, fake.api);
       fake.seen.clear();
       await _tapScope(tester, 'Siguiendo');
 
@@ -313,7 +332,7 @@ void main() {
       final fake = _Fake()
         ..checkins = [_checkinJson('c1', t, comment: 'Check-in que sí llegó')]
         ..failNow = true;
-      await _pump(tester, fake);
+      await _pump(tester, fake.api);
       await _tapScope(tester, 'Siguiendo');
 
       expect(find.text('Check-in que sí llegó'), findsOneWidget);
@@ -326,7 +345,7 @@ void main() {
       final fake = _Fake()
         ..failCheckins = true
         ..now['following'] = [_postJson('p1', t, text: 'Post que sí llegó')];
-      await _pump(tester, fake);
+      await _pump(tester, fake.api);
       // La pestaña inicial (Todos) solo tiene check-ins: falla y se reintenta.
       expect(find.text('Reintentar'), findsOneWidget);
       await _tapScope(tester, 'Siguiendo');
@@ -340,20 +359,21 @@ void main() {
       final fake = _Fake()
         ..failCheckins = true
         ..failNow = true;
-      await _pump(tester, fake);
+      await _pump(tester, fake.api);
       await _tapScope(tester, 'Siguiendo');
 
       expect(find.text('Reintentar'), findsOneWidget);
       expect(find.text('No se pudo cargar todo'), findsNothing);
     });
 
-    testWidgets('Cargar más pide la página siguiente solo de la fuente que tiene',
+    testWidgets(
+        'Cargar más pide la página siguiente solo de la fuente que tiene',
         (tester) async {
       final fake = _Fake()
         ..checkinPages = 2
         ..checkins = [_checkinJson('c1', t, comment: 'Página uno')]
         ..now['following'] = [_postJson('p1', t, text: 'Post único')];
-      await _pump(tester, fake);
+      await _pump(tester, fake.api);
       await _tapScope(tester, 'Siguiendo');
       fake.seen.clear();
 
@@ -361,17 +381,23 @@ void main() {
       await tester.tap(find.text('Cargar más'));
       await _settle(tester);
 
-      expect(fake.calls('/checkins/feed/following').single.url.queryParameters['page'],
+      expect(
+          fake
+              .calls('/checkins/feed/following')
+              .single
+              .url
+              .queryParameters['page'],
           '2');
       expect(fake.calls('/now/feed'), isEmpty);
       expect(find.text('Cargar más'), findsNothing);
     });
 
-    testWidgets('Todos sigue siendo la pestaña inicial: mismo endpoint de siempre',
+    testWidgets(
+        'Todos sigue siendo la pestaña inicial: mismo endpoint de siempre',
         (tester) async {
       final fake = _Fake()
         ..checkins = [_checkinJson('c1', t, comment: 'Del feed general')];
-      await _pump(tester, fake);
+      await _pump(tester, fake.api);
 
       expect(find.text('Del feed general'), findsOneWidget);
       expect(fake.seen, hasLength(1));
@@ -381,11 +407,12 @@ void main() {
           {'size': '20', 'page': '1', 'sort': 'recent'});
     });
 
-    testWidgets('FeedScreen(placeId) no tiene pestañas de Ahora y llama a lo mismo',
+    testWidgets(
+        'FeedScreen(placeId) no tiene pestañas de Ahora y llama a lo mismo',
         (tester) async {
       final fake = _Fake()
         ..checkins = [_checkinJson('c1', t, comment: 'Reseña del local')];
-      await _pump(tester, fake, placeId: 'p1');
+      await _pump(tester, fake.api, placeId: 'p1');
 
       expect(find.text('Reseña del local'), findsOneWidget);
       for (final label in ['Todos', 'Siguiendo', 'Cerca de mí', 'Amigos']) {
@@ -404,7 +431,7 @@ void main() {
         (tester) async {
       final fake = _Fake()
         ..checkins = [_checkinJson('c1', t, comment: 'Mi visita')];
-      await _pump(tester, fake, history: true);
+      await _pump(tester, fake.api, history: true);
 
       expect(find.text('Mi visita'), findsOneWidget);
       expect(find.byType(ChoiceChip), findsNothing);
@@ -412,11 +439,184 @@ void main() {
       expect(fake.calls('/now/feed'), isEmpty);
     });
 
+    testWidgets('una publicación vencida con la pantalla abierta no se muestra',
+        (tester) async {
+      final fake = _Fake()
+        ..now['following'] = [
+          _postJson('p-viva', t, text: 'Sigue viva'),
+          _postJson('p-vencida', t,
+              text: 'Ya venció', life: const Duration(seconds: -1)),
+        ];
+      await _pump(tester, fake.api);
+      await _tapScope(tester, 'Siguiendo');
+
+      expect(find.text('Sigue viva'), findsOneWidget);
+      expect(find.text('Ya venció'), findsNothing);
+    });
+
+    testWidgets('una respuesta lenta de la pestaña anterior se descarta',
+        (tester) async {
+      final slowCheckins = Completer<http.Response>();
+      final slowNow = Completer<http.Response>();
+      final api = ApiClient(client: MockClient((req) async {
+        final path = req.url.path;
+        if (path.endsWith('/checkins/feed')) {
+          return _ok({'data': [], 'total': 0, 'page': 1, 'totalPages': 1});
+        }
+        if (path.endsWith('/checkins/feed/following')) {
+          return slowCheckins.future;
+        }
+        if (req.url.queryParameters['scope'] == 'following') {
+          return slowNow.future;
+        }
+        return _ok({
+          'data': [_postJson('pa', t, text: 'Del amigo')],
+          'total': 1
+        });
+      }));
+      await _pump(tester, api);
+      await _tapScope(tester, 'Siguiendo'); // queda esperando
+      await _tapScope(tester, 'Amigos');
+      expect(find.text('Del amigo'), findsOneWidget);
+
+      slowCheckins.complete(_ok({
+        'data': [_checkinJson('c1', t, comment: 'Viejo siguiendo')],
+        'total': 1,
+        'totalPages': 1,
+      }));
+      slowNow.complete(_ok({
+        'data': [_postJson('p1', t, text: 'Post siguiendo')],
+        'total': 1,
+      }));
+      await _settle(tester);
+
+      expect(find.text('Viejo siguiendo'), findsNothing);
+      expect(find.text('Post siguiendo'), findsNothing);
+      expect(find.text('Del amigo'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsNothing);
+      expect(find.text('Cargar más'), findsNothing);
+    });
+
+    testWidgets(
+        'la fuente que falló se reintenta con Cargar más, sin duplicar lo ya visto',
+        (tester) async {
+      var failPosts = true;
+      final seen = <String>[];
+      final api = ApiClient(client: MockClient((req) async {
+        final path = req.url.path;
+        if (path.endsWith('/checkins/feed')) {
+          return _ok({'data': [], 'total': 0, 'page': 1, 'totalPages': 1});
+        }
+        final page = int.parse(req.url.queryParameters['page']!);
+        if (path.endsWith('/checkins/feed/following')) {
+          seen.add('ck$page');
+          return _ok({
+            'data': [
+              _checkinJson('c$page', t.subtract(Duration(hours: page)),
+                  comment: 'CK pag $page')
+            ],
+            'total': 40,
+            'totalPages': 2,
+          });
+        }
+        seen.add('now$page');
+        if (failPosts) return http.Response('{"message":"x"}', 500);
+        return _ok({
+          'data': [
+            _postJson('p$page', t.subtract(Duration(minutes: page)),
+                text: 'POST pag $page')
+          ],
+          'total': 1,
+        });
+      }));
+      await _pump(tester, api);
+      await _tapScope(tester, 'Siguiendo');
+      expect(find.text('CK pag 1'), findsOneWidget);
+      expect(find.text('No se pudo cargar todo'), findsOneWidget);
+
+      failPosts = false;
+      seen.clear();
+      await tester.ensureVisible(find.text('Cargar más'));
+      await tester.tap(find.text('Cargar más'));
+      await _settle(tester);
+
+      // Check-ins pasan a la página 2; Ahora vuelve a pedir su página 1.
+      expect(seen, unorderedEquals(['ck2', 'now1']));
+      expect(find.text('CK pag 1'), findsOneWidget);
+      expect(find.text('CK pag 2'), findsOneWidget);
+      expect(find.text('POST pag 1'), findsOneWidget);
+      expect(find.text('Cargar más'), findsNothing);
+    });
+
+    testWidgets(
+        'si el servidor repite un elemento en la página siguiente, sale una vez',
+        (tester) async {
+      final api = ApiClient(client: MockClient((req) async {
+        final page = int.parse(req.url.queryParameters['page']!);
+        return _ok({
+          'data': [
+            _checkinJson('c-repetido', t, comment: 'Repetido'),
+            _checkinJson('c$page', t.subtract(Duration(hours: page)),
+                comment: 'Propio $page'),
+          ],
+          'total': 40,
+          'page': page,
+          'totalPages': 2,
+        });
+      }));
+      await _pump(tester, api);
+      await tester.ensureVisible(find.text('Cargar más'));
+      await tester.tap(find.text('Cargar más'));
+      await _settle(tester);
+
+      expect(find.text('Repetido'), findsOneWidget);
+      expect(find.text('Propio 1'), findsOneWidget);
+      expect(find.text('Propio 2'), findsOneWidget);
+    });
+
+    testWidgets(
+        'Reintentar con elementos en pantalla pide la página que falló, no la 1',
+        (tester) async {
+      var failPage2 = true;
+      final pages = <String>[];
+      final api = ApiClient(client: MockClient((req) async {
+        final page = req.url.queryParameters['page']!;
+        pages.add(page);
+        if (page == '2' && failPage2) {
+          return http.Response('{"message":"x"}', 500);
+        }
+        return _ok({
+          'data': [_checkinJson('c$page', t, comment: 'Pag $page')],
+          'total': 40,
+          'page': int.parse(page),
+          'totalPages': 2,
+        });
+      }));
+      await _pump(tester, api);
+      await tester.ensureVisible(find.text('Cargar más'));
+      await tester.tap(find.text('Cargar más'));
+      await _settle(tester);
+      expect(find.text('Pag 1'), findsOneWidget);
+      expect(find.text('Reintentar'), findsOneWidget);
+
+      failPage2 = false;
+      pages.clear();
+      await tester.ensureVisible(find.text('Reintentar'));
+      await tester.tap(find.text('Reintentar'));
+      await _settle(tester);
+
+      expect(pages, ['2']);
+      expect(find.text('Pag 1'), findsOneWidget);
+      expect(find.text('Pag 2'), findsOneWidget);
+      expect(find.text('Reintentar'), findsNothing);
+    });
+
     testWidgets('invitado en reseñas de un local: sin pestañas ni aviso',
         (tester) async {
       final fake = _Fake()
         ..checkins = [_checkinJson('c1', t, comment: 'Reseña pública')];
-      await _pump(tester, fake, auth: _auth(loggedIn: false), placeId: 'p1');
+      await _pump(tester, fake.api,
+          auth: _auth(loggedIn: false), placeId: 'p1');
 
       expect(find.text('Reseña pública'), findsOneWidget);
       expect(find.byType(ChoiceChip), findsNothing);
