@@ -132,8 +132,8 @@ class GeofenceSyncService {
   final reward = card['rewardTitle'] as String? ?? 'tu premio';
   final remaining = (card['stampsRemaining'] as num?)?.toInt() ?? 0;
   if (remaining <= 0) {
-    return (title: '¡Tu premio te espera en $place!', body: 'Ya puedes canjear: $reward');
+    return (title: '¡Tienes para canjear en $place!', body: 'Muestra tu tarjeta y canjea: $reward');
   }
-  final sellos = remaining == 1 ? '1 sello' : '$remaining sellos';
-  return (title: 'Estás cerca de $place', body: 'Te faltan $sellos para $reward');
+  final falta = remaining == 1 ? 'Te falta 1 sello' : 'Te faltan $remaining sellos';
+  return (title: 'Estás cerca de $place', body: '$falta para $reward');
 }

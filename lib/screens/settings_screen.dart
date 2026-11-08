@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api_client.dart';
 import '../core/external_actions.dart';
 import '../core/geofence_sync_service.dart';
 import '../state/auth_provider.dart';
-import 'battery_optimization_onboarding_screen.dart';
+import '../widgets/proximity_alerts.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -77,77 +76,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  void _snack(String msg) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-    }
-  }
-
-  /// Google Play requires this in-app disclosure before asking for
-  /// background location ("prominent disclosure").
-  Future<bool> _showLocationDisclosure() async =>
-      await showDialog<bool>(
-        context: context,
-        builder: (c) => AlertDialog(
-          title: const Text('Ubicación en segundo plano'),
-          content: const Text(
-              'Wuarikes recopila tu ubicación para avisarte cuando pases cerca de un huarique donde tienes sellos o un premio, incluso cuando la app está cerrada o no se está usando.\n\n'
-              'Tu ubicación no se envía a nuestros servidores: la comparación se hace en tu teléfono. Puedes desactivarlo cuando quieras desde aquí.\n\n'
-              'En la siguiente pantalla elige "Permitir todo el tiempo".'),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.of(c).pop(false),
-                child: const Text('No, gracias')),
-            FilledButton(
-                onPressed: () => Navigator.of(c).pop(true),
-                child: const Text('Continuar')),
-          ],
-        ),
-      ) ??
-      false;
-
-  /// whileInUse first, then a second request upgrades to "always" (on
-  /// Android 11+ this opens the system settings page).
-  Future<bool> _requestAlwaysLocation() async {
-    var p = await Geolocator.checkPermission();
-    if (p == LocationPermission.denied) p = await Geolocator.requestPermission();
-    if (p == LocationPermission.whileInUse) p = await Geolocator.requestPermission();
-    return p == LocationPermission.always;
-  }
-
   Future<void> _toggleGeofencing(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
     if (!value) {
       await _geofenceService.stop();
-      await prefs.setBool(geofencingPrefKey, false);
+      await (await SharedPreferences.getInstance()).setBool(geofencingPrefKey, false);
       if (mounted) setState(() => _geofencingEnabled = false);
       return;
     }
-
-    if (!await _showLocationDisclosure()) return;
-    if (!await _requestAlwaysLocation()) {
-      _snack('Necesitamos el permiso de ubicación "Todo el tiempo" para avisarte.');
-      return;
-    }
-    if (!mounted) return;
-
-    if (!(prefs.getBool('battery_onboarding_shown') ?? false)) {
-      await Navigator.of(context).push(MaterialPageRoute(
-        builder: (context) => BatteryOptimizationOnboardingScreen(
-          onDismiss: () => Navigator.of(context).pop(),
-        ),
-      ));
-    }
-
     setState(() => _busy = true);
-    final ok = await _geofenceService.start();
-    await prefs.setBool(geofencingPrefKey, ok);
-    if (!mounted) return;
-    setState(() {
-      _busy = false;
-      _geofencingEnabled = ok;
-    });
-    if (!ok) _snack('No pudimos activar los avisos de cercanía. Intenta de nuevo.');
+    final ok = await enableProximityAlerts(context);
+    if (mounted) {
+      setState(() {
+        _busy = false;
+        _geofencingEnabled = ok;
+      });
+    }
   }
 
   Future<void> _confirmDeleteAccount() async {

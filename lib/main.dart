@@ -19,7 +19,11 @@ void main() {
     GeofenceSyncService().resumeIfEnabled();
     checkCompletedStamps();
   });
-  _onResume = AppLifecycleListener(onResume: checkCompletedStamps);
+  // Al volver a la app: aviso de premio y tarjetas al día para el aviso de cercanía.
+  _onResume = AppLifecycleListener(onResume: () {
+    checkCompletedStamps();
+    GeofenceSyncService().resumeIfEnabled();
+  });
 }
 
 // Se guarda para que el listener viva lo que dura la app.

@@ -47,8 +47,9 @@ Position _at(double lat, double lng) => Position(
       speedAccuracy: 0,
     );
 
-Future<void> _pump(WidgetTester tester, Widget home, AuthProvider auth) async {
-  tester.view.physicalSize = const Size(1080, 2340);
+Future<void> _pump(WidgetTester tester, Widget home, AuthProvider auth,
+    {double height = 2340}) async {
+  tester.view.physicalSize = Size(1080, height);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(ChangeNotifierProvider<AuthProvider>.value(
@@ -126,15 +127,16 @@ void main() {
                 _card('p4', 'Pizzeria', type: 'points', points: 120),
               ]),
               locate: () async => null),
-          _auth());
+          _auth(),
+          height: 6000); // las 4 tarjetas a la vista
 
       expect(find.text('Mis premios'), findsOneWidget);
       expect(find.text('Mis Fidelizaciones'), findsNothing);
       for (final n in ['El Chinito', 'Cafe Bisetti', 'Barberia Don Lucho']) {
         expect(find.text(n), findsOneWidget, reason: n);
       }
-      expect(find.text('🎉 ¡Listo para canjear!'), findsNWidgets(2));
-      expect(find.text('2 sellos para "Postre gratis"'), findsOneWidget);
+      expect(find.text('🎁 ¡Tienes para canjear!'), findsNWidgets(2));
+      expect(find.text('Te faltan 2 sellos para "Postre gratis"'), findsOneWidget);
       expect(find.text('120 puntos acumulados'), findsOneWidget);
     });
 
@@ -149,7 +151,7 @@ void main() {
               locate: () async => null),
           _auth());
 
-      expect(find.text('🎉 ¡Listo para canjear!'), findsOneWidget);
+      expect(find.text('🎁 ¡Tienes para canjear!'), findsOneWidget);
       expect(_stamps('full'), findsNWidgets(8));
       expect(_stamps('empty'), findsNothing);
     });
@@ -165,8 +167,50 @@ void main() {
           _auth());
 
       expect(find.text('El Chinito'), findsOneWidget);
-      expect(find.text('1 sello para "Postre gratis"'), findsOneWidget);
-      expect(find.text('🎉 ¡Listo para canjear!'), findsNothing);
+      expect(find.text('Te falta 1 sello para "Postre gratis"'), findsOneWidget);
+      expect(find.text('🎁 ¡Tienes para canjear!'), findsNothing);
+    });
+
+    testWidgets('la tarjeta dice cuantos sellos tiene de la meta', (tester) async {
+      await _pump(
+          tester,
+          MyLoyaltyScreen(
+              api: _cardsApi(
+                  [_card('p1', 'El Chinito', stamps: 7, goal: 10, remaining: 3)]),
+              locate: () async => null),
+          _auth());
+
+      expect(tester.widget<Text>(find.byKey(const Key('stamp-count'))).data, '7');
+      expect(find.text(' / 10 sellos'), findsOneWidget);
+      expect(find.text('🎁'), findsOneWidget); // el ultimo casillero es el premio
+    });
+
+    testWidgets('completa: pide mostrarla en el local para canjear',
+        (tester) async {
+      await _pump(
+          tester,
+          MyLoyaltyScreen(
+              api: _cardsApi(
+                  [_card('p1', 'El Chinito', stamps: 10, goal: 10, remaining: 0)]),
+              locate: () async => null),
+          _auth());
+
+      expect(tester.widget<Text>(find.byKey(const Key('stamp-count'))).data, '10');
+      expect(find.text('Muestra esta tarjeta en el local para canjear: Postre gratis'),
+          findsOneWidget);
+    });
+
+    testWidgets('con los avisos de cercania apagados ofrece activarlos',
+        (tester) async {
+      await _pump(
+          tester,
+          MyLoyaltyScreen(
+              api: _cardsApi([_card('p1', 'Cerca', stamps: 1, goal: 8, remaining: 7)]),
+              locate: () async => null),
+          _auth());
+      await tester.pump();
+
+      expect(find.byKey(const Key('alerts-turn-on')), findsOneWidget);
     });
 
     testWidgets('sellos llenos y vacios segun el avance', (tester) async {

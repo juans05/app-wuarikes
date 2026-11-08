@@ -19,9 +19,10 @@ void main() {
 
   test('proximityMessage says what is missing, or that the reward is ready', () {
     final ready = proximityMessage({'placeName': 'Don Pepe', 'stampsRemaining': 0, 'rewardTitle': 'Ceviche gratis'});
-    expect(ready.body, 'Ya puedes canjear: Ceviche gratis');
+    expect(ready.title, '¡Tienes para canjear en Don Pepe!');
+    expect(ready.body, 'Muestra tu tarjeta y canjea: Ceviche gratis');
     final one = proximityMessage({'placeName': 'Don Pepe', 'stampsRemaining': 1});
-    expect(one.body, 'Te faltan 1 sello para tu premio');
+    expect(one.body, 'Te falta 1 sello para tu premio');
     final many = proximityMessage({'placeName': 'Don Pepe', 'stampsRemaining': 4, 'rewardTitle': 'Postre'});
     expect(many.title, 'Estás cerca de Don Pepe');
     expect(many.body, 'Te faltan 4 sellos para Postre');
