@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -28,7 +29,18 @@ const _maxPhotoBytes = 10 * 1024 * 1024;
 const _maxVideoBytes = 20 * 1024 * 1024;
 
 /// Mensaje para el usuario según lo que respondió el backend al publicar.
+/// Tiempo máximo para publicar: con la red colgada la hoja no queda bloqueada.
+Duration publishTimeout(String kind) => switch (kind) {
+      'video' => const Duration(seconds: 120),
+      'photo' => const Duration(seconds: 60),
+      _ => const Duration(seconds: 20),
+    };
+
 String publishErrorMessage(Object error) {
+  if (error is TimeoutException) {
+    // El servidor pudo recibirla igual: mejor revisar antes de duplicarla.
+    return 'La conexión está muy lenta. Revisa "Mis publicaciones" antes de reintentar: puede que sí se haya publicado.';
+  }
   if (error is ApiException) {
     switch (error.status) {
       case 429:
@@ -224,7 +236,7 @@ class _PublishSheetState extends State<_PublishSheet> {
         bytes: _kind == 'text' ? null : _bytes,
         filename: _fileName.isEmpty ? null : _fileName,
         mimeType: _fileMime,
-      );
+      ).timeout(publishTimeout(_kind));
       // Si la hoja ya se cerró por arrastre, no sacar la pantalla de debajo.
       if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) navigator.pop();
       messenger

@@ -759,6 +759,33 @@ void main() {
       expect(find.text('Publicado. Dura 24 h.'), findsOneWidget);
     });
 
+    testWidgets('si la red se cuelga, al tiempo máximo avisa y la hoja se puede cerrar',
+        (tester) async {
+      final never = Completer<http.Response>();
+      await pumpSheet(tester, api: ApiClient(client: MockClient((r) {
+        return never.future;
+      })), position: here);
+
+      await tester.tap(find.text('✏️ Texto'));
+      await tester.pump();
+      await tester.enterText(find.byKey(const Key('now-text')), 'Hay cola');
+      await tester.tap(find.byKey(const Key('publish-button')));
+      await tester.pump();
+      await tester.pump(publishTimeout('text') + const Duration(seconds: 1));
+      await tester.pump();
+
+      expect(find.textContaining('La conexión está muy lenta'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('¿Qué está pasando?'), findsNothing);
+    });
+
+    test('publishTimeout: más tiempo para subir foto o video', () {
+      expect(publishTimeout('text'), const Duration(seconds: 20));
+      expect(publishTimeout('photo'), const Duration(seconds: 60));
+      expect(publishTimeout('video'), const Duration(seconds: 120));
+    });
+
     testWidgets('sin publicar, el botón atrás sí cierra la hoja',
         (tester) async {
       await pumpSheet(tester,

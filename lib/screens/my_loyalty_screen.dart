@@ -172,9 +172,8 @@ final _gradients = <List<Color>>[
   ],
 ];
 
-/// ¿Ya juntó los sellos del premio? Cuenta tener la meta o más. No se usa
-/// `rewardReady` (`stampsRemaining == 0`): el backend manda de 1 a la meta
-/// (meta - sellos % meta), nunca 0, así que con datos reales no se cumple.
+/// ¿Ya juntó los sellos del premio? Cuenta tener la meta o más (el backend
+/// manda `stampsRemaining == 0` en ese caso desde 2026-11-08).
 bool _isReady(MyLoyaltyCard c) {
   final goal = c.stampsToReward ?? 0;
   return c.programType == 'stamps' && goal > 0 && c.stamps >= goal;
