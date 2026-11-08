@@ -1,23 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import '../core/api_client.dart';
 import '../core/app_theme.dart';
 import '../core/models.dart';
+import '../core/now_location.dart' show NowLocator;
 import '../core/place_image.dart';
 import '../state/auth_provider.dart';
 import '../widgets/login_required_view.dart';
+import '../widgets/place_list_tile.dart' show formatDistance;
 import 'place_detail_screen.dart';
 
+/// "📍 a X" solo sale si el local está a esta distancia o menos.
+const _nearMeters = 5000.0;
+
 class MyLoyaltyScreen extends StatefulWidget {
-  const MyLoyaltyScreen({super.key});
+  /// Solo para pruebas: API y GPS de mentira.
+  final ApiClient? api;
+  final NowLocator? locate;
+  const MyLoyaltyScreen({super.key, this.api, this.locate});
 
   @override
   State<MyLoyaltyScreen> createState() => _MyLoyaltyScreenState();
 }
 
 class _MyLoyaltyScreenState extends State<MyLoyaltyScreen> {
-  final ApiClient _api = ApiClient();
+  late final ApiClient _api = widget.api ?? ApiClient();
   List<MyLoyaltyCard> _cards = [];
+  Position? _position;
   bool _loading = true;
   String? _error;
 
@@ -40,11 +50,29 @@ class _MyLoyaltyScreenState extends State<MyLoyaltyScreen> {
     try {
       final cards = await _api.getMyLoyaltyCards();
       if (mounted) setState(() => _cards = cards);
+      // Sin esperar: las tarjetas se ven ya y la distancia llega después.
+      if (mounted && cards.any((c) => c.hasLocation)) _findMe();
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _findMe() async {
+    try {
+      final p = await (widget.locate ?? _quietPosition)();
+      if (mounted && p != null) setState(() => _position = p);
+    } catch (_) {}
+  }
+
+  /// Metros de la persona al local; null si no se sabe o está lejos.
+  double? _distanceTo(MyLoyaltyCard card) {
+    final p = _position;
+    if (p == null || !card.hasLocation) return null;
+    final m = Geolocator.distanceBetween(
+        p.latitude, p.longitude, card.latitude!, card.longitude!);
+    return m <= _nearMeters ? m : null;
   }
 
   @override
@@ -53,7 +81,7 @@ class _MyLoyaltyScreenState extends State<MyLoyaltyScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(title: const Text('Mis Fidelizaciones')),
+      appBar: AppBar(title: const Text('Mis premios')),
       body: SafeArea(
         child: !isLoggedIn
             ? LoginRequiredView(
@@ -86,24 +114,27 @@ class _MyLoyaltyScreenState extends State<MyLoyaltyScreen> {
                           )
                         : RefreshIndicator(
                             onRefresh: _load,
-                            child: ListView.separated(
+                            child: ListView(
                               padding: const EdgeInsets.all(16),
-                              itemCount: _cards.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 10),
-                              itemBuilder: (context, i) {
-                                final card = _cards[i];
-                                return _LoyaltyCardTile(
-                                  card: card,
-                                  onTap: () async {
-                                    await Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                            builder: (_) => PlaceDetailScreen(
-                                                placeId: card.placeId)));
-                                    if (mounted) _load();
-                                  },
-                                );
-                              },
+                              children: [
+                                Text('Tus tarjetas de fidelización en un solo lugar',
+                                    style: AppText.bodyMd),
+                                for (var i = 0; i < _cards.length; i++) ...[
+                                  const SizedBox(height: 12),
+                                  _PrizeCard(
+                                    card: _cards[i],
+                                    gradient: _gradients[i % _gradients.length],
+                                    meters: _distanceTo(_cards[i]),
+                                    onTap: () async {
+                                      await Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                              builder: (_) => PlaceDetailScreen(
+                                                  placeId: _cards[i].placeId)));
+                                      if (mounted) _load();
+                                    },
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
       ),
@@ -111,82 +142,172 @@ class _MyLoyaltyScreenState extends State<MyLoyaltyScreen> {
   }
 }
 
-class _LoyaltyCardTile extends StatelessWidget {
+/// Posición sin pedir permiso ni esperar al GPS: la última conocida, o una
+/// lectura rápida si el permiso ya estaba dado. Null en cualquier otro caso.
+Future<Position?> _quietPosition() async {
+  try {
+    final permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return null;
+    }
+    if (!await Geolocator.isLocationServiceEnabled()) return null;
+    return await Geolocator.getLastKnownPosition() ??
+        await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.low,
+                timeLimit: Duration(seconds: 5)));
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Colores de las tarjetas, rotando de a uno por local.
+final _gradients = <List<Color>>[
+  [AppColors.primary, AppColors.primaryLight],
+  [AppColors.onSurface, AppColors.onSurfaceVariant],
+  [
+    AppColors.accent,
+    Color.lerp(AppColors.accent, AppColors.surfaceContainerLowest, 0.3)!
+  ],
+];
+
+/// ¿Ya juntó los sellos del premio? `rewardReady` mira `stampsRemaining == 0`,
+/// pero el backend manda de 1 a la meta (meta - sellos % meta), nunca 0: con
+/// los sellos completos dice "meta". Por eso también cuenta tener la meta.
+bool _isReady(MyLoyaltyCard c) {
+  final goal = c.stampsToReward ?? 0;
+  return c.programType == 'stamps' &&
+      (c.rewardReady || (goal > 0 && c.stamps >= goal));
+}
+
+class _PrizeCard extends StatelessWidget {
   final MyLoyaltyCard card;
+  final List<Color> gradient;
+  final double? meters;
   final VoidCallback onTap;
-  const _LoyaltyCardTile({required this.card, required this.onTap});
+  const _PrizeCard({
+    required this.card,
+    required this.gradient,
+    required this.meters,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isStamps = card.programType == 'stamps';
-    final progress = isStamps && (card.stampsToReward ?? 0) > 0
-        ? (card.stamps % card.stampsToReward!) / card.stampsToReward!
-        : null;
+    final goal = card.stampsToReward ?? 0;
+    final ready = _isReady(card);
+    final filled = ready ? goal : (goal > 0 ? card.stamps % goal : 0);
+    final remaining = card.stampsRemaining ?? 0;
+    const onColor = AppColors.surfaceContainerLowest;
 
-    return InkWell(
-      onTap: onTap,
+    final subtitle = ready
+        ? (card.rewardTitle ?? 'Tu premio')
+        : isStamps
+            ? '$remaining sello${remaining == 1 ? '' : 's'} para "${card.rewardTitle ?? 'tu premio'}"'
+            : '${card.points} puntos acumulados';
+
+    return Material(
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppRadius.lg),
-      child: Container(
-        padding: const EdgeInsets.all(12),
+      clipBehavior: Clip.antiAlias,
+      child: Ink(
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(
-              color: card.rewardReady ? AppColors.primary : AppColors.border,
-              width: card.rewardReady ? 1.5 : 1),
+          gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: gradient),
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: SizedBox(
-                width: 56,
-                height: 56,
-                child: PlaceImage(
-                    imageUrl: card.placeCoverImageUrl, logoPadding: 4),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(card.placeName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.bodyLg
-                          .copyWith(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  if (card.rewardReady)
-                    Text('🎁 ¡Premio listo para canjear!',
-                        style: AppText.bodyMd.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600))
-                  else if (isStamps)
-                    Text(
-                        '${card.stampsRemaining ?? 0} sello${(card.stampsRemaining ?? 0) == 1 ? '' : 's'} para "${card.rewardTitle ?? 'tu premio'}"',
-                        style: AppText.bodyMd)
-                  else
-                    Text('${card.points} puntos acumulados',
-                        style: AppText.bodyMd),
-                  if (progress != null) ...[
-                    const SizedBox(height: 6),
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 6,
-                          backgroundColor: AppColors.border,
-                          color: AppColors.primary),
+                      borderRadius: BorderRadius.circular(10),
+                      child: SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: PlaceImage(
+                            imageUrl: card.placeCoverImageUrl, logoPadding: 4),
+                      ),
                     ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(card.placeName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.bodyLg.copyWith(
+                              color: onColor, fontWeight: FontWeight.w700)),
+                    ),
+                    if (meters != null) ...[
+                      const SizedBox(width: 8),
+                      _Tag('📍 a ${formatDistance(meters!)}',
+                          background: onColor, foreground: AppColors.primary),
+                    ],
                   ],
+                ),
+                const SizedBox(height: 8),
+                Text(subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.bodyMd
+                        .copyWith(color: onColor.withValues(alpha: 0.9))),
+                if (ready) ...[
+                  const SizedBox(height: 8),
+                  const _Tag('🎉 ¡Listo para canjear!',
+                      background: AppColors.secondary,
+                      foreground: AppColors.onSurface),
                 ],
-              ),
+                if (isStamps && goal > 0) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (var i = 0; i < goal; i++)
+                        Container(
+                          key: Key('stamp-${i < filled ? 'full' : 'empty'}-$i'),
+                          width: 18,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: i < filled
+                                ? onColor
+                                : onColor.withValues(alpha: 0.3),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ],
             ),
-            const Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant),
-          ],
+          ),
         ),
       ),
     );
   }
+}
+
+class _Tag extends StatelessWidget {
+  final String text;
+  final Color background;
+  final Color foreground;
+  const _Tag(this.text, {required this.background, required this.foreground});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+            color: background, borderRadius: BorderRadius.circular(999)),
+        child: Text(text,
+            style: TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w700, color: foreground)),
+      );
 }

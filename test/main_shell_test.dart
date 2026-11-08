@@ -185,6 +185,9 @@ void main() {
     final guardados = find.text('Guardados');
     await tester.scrollUntilVisible(guardados, 200,
         scrollable: find.byType(Scrollable).first);
+    // La fila quedó más abajo (tras las insignias): la lista estima el largo
+    // mientras se arma y asienta el desplazamiento recién en el cuadro siguiente.
+    await tester.pump();
     await tester.tap(guardados);
     await tester.pumpAndSettle();
 

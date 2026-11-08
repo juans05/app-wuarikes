@@ -11,14 +11,18 @@ import '../core/models.dart';
 import '../state/auth_provider.dart';
 import 'edit_account_screen.dart';
 import 'favorites_screen.dart';
+import 'friends_screen.dart';
+import 'messages_screen.dart';
+import 'my_posts_screen.dart';
 import 'settings_screen.dart';
 import 'social_screen.dart';
 import 'feed_screen.dart';
 import 'login_screen.dart';
-import 'my_loyalty_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  /// Solo para pruebas: API de mentira.
+  final ApiClient? api;
+  const ProfileScreen({super.key, this.api});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -49,7 +53,7 @@ String? _nextRankTier(int level) {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final ApiClient _api = ApiClient();
+  late final ApiClient _api = widget.api ?? ApiClient();
   GamificationStats? _stats;
   AppUser? _profile;
   List<AppBadge> _badges = [];
@@ -62,7 +66,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _load() async {
-    if (!context.read<AuthProvider>().isLoggedIn) return;
+    if (!mounted || !context.read<AuthProvider>().isLoggedIn) return;
     try {
       final stats = await _api.getMyStats();
       if (mounted) setState(() => _stats = stats);
@@ -86,8 +90,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (user == null) return;
     final saved = await Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const EditAccountScreen()));
-    if (saved == true) _load();
+    if (saved == true && mounted) _load();
   }
+
+  /// Un pin por cada check-in cuyo local tiene posición.
+  List<Marker> _placeMarkers() => [
+        for (final c in _checkins)
+          if (c.place?.latitude != null && c.place?.longitude != null)
+            Marker(
+              point: LatLng(c.place!.latitude!, c.place!.longitude!),
+              alignment: Alignment.topCenter,
+              width: 36,
+              height: 46,
+              child: MapPin(imageUrl: c.place!.coverImageUrl, size: 32),
+            ),
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -134,20 +151,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final progress =
         nextLevelXp == 0 ? 0.0 : (xp / nextLevelXp).clamp(0.0, 1.0);
 
-    final placeMarkers = <Marker>[];
-    for (final c in _checkins) {
-      final p = c.place;
-      if (p?.latitude != null && p?.longitude != null) {
-        placeMarkers.add(Marker(
-          point: LatLng(p!.latitude!, p.longitude!),
-          alignment: Alignment.topCenter,
-          width: 36,
-          height: 46,
-          child: MapPin(imageUrl: p.coverImageUrl, size: 32),
-        ));
-      }
-    }
-
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -158,13 +161,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               icon: const Icon(Icons.settings),
               onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const SettingsScreen()))),
-          const Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: CircleAvatar(
-                radius: 16,
-                backgroundColor: AppColors.primaryContainer,
-                child: Icon(Icons.person, size: 18, color: AppColors.primary)),
-          ),
         ],
       ),
       body: RefreshIndicator(
@@ -178,38 +174,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Image.network(user.details['coverImageUrl'],
                       height: 150, fit: BoxFit.cover)),
             Center(
-              child: Stack(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.fromBorderSide(
-                            BorderSide(color: AppColors.primary, width: 2))),
-                    child: CircleAvatar(
-                      radius: 40,
-                      backgroundColor: AppColors.primaryContainer,
-                      backgroundImage: user.avatarUrl != null
-                          ? NetworkImage(user.avatarUrl!)
-                          : null,
-                      child: user.avatarUrl == null
-                          ? const Icon(Icons.person,
-                              size: 36, color: AppColors.primary)
-                          : null,
-                    ),
-                  ),
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                          color: AppColors.amber, shape: BoxShape.circle),
-                      child: const Icon(Icons.star_rounded,
-                          size: 16, color: Colors.white),
-                    ),
-                  ),
-                ],
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.fromBorderSide(
+                        BorderSide(color: AppColors.primary, width: 2))),
+                child: CircleAvatar(
+                  radius: 40,
+                  backgroundColor: AppColors.primaryContainer,
+                  backgroundImage: user.avatarUrl != null
+                      ? NetworkImage(user.avatarUrl!)
+                      : null,
+                  child: user.avatarUrl == null
+                      ? const Icon(Icons.person,
+                          size: 36, color: AppColors.primary)
+                      : null,
+                ),
               ),
             ),
             const SizedBox(height: 10),
@@ -219,6 +200,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     .copyWith(color: AppColors.primary, fontSize: 20)),
             Text('${user.details['levelName'] ?? _rankName(level)}',
                 textAlign: TextAlign.center, style: AppText.bodyMd),
+            for (final key in ['city', 'hometown', 'pronouns'])
+              if ((user.details[key] as String? ?? '').isNotEmpty)
+                Text('${user.details[key]}', textAlign: TextAlign.center),
+            if ((_profile?.bio ?? '').isNotEmpty)
+              Text(_profile!.bio!,
+                  textAlign: TextAlign.center, style: AppText.bodyMd)
+            else
+              Center(
+                child: TextButton(
+                  onPressed: _editProfile,
+                  child: Text('Agrega una bio',
+                      style: AppText.bodyMd.copyWith(color: AppColors.primary)),
+                ),
+              ),
             const SizedBox(height: 8),
             Center(
               child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -238,21 +233,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ]),
             ),
             const SizedBox(height: 6),
-            for (final key in ['city', 'hometown', 'pronouns'])
-              if ((user.details[key] as String? ?? '').isNotEmpty)
-                Text('${user.details[key]}', textAlign: TextAlign.center),
-            if ((_profile?.bio ?? '').isNotEmpty)
-              Text(_profile!.bio!,
-                  textAlign: TextAlign.center, style: AppText.bodyMd)
-            else
-              Center(
-                child: TextButton(
-                  onPressed: _editProfile,
-                  child: Text('Agrega una bio',
-                      style: AppText.bodyMd.copyWith(color: AppColors.primary)),
-                ),
-              ),
-            const SizedBox(height: 6),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               IconButton.outlined(
                 tooltip: 'Editar perfil',
@@ -265,13 +245,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onPressed: () => inviteFriends(context),
                 icon: const Icon(Icons.person_add_alt_1_outlined),
               ),
-              const SizedBox(width: 16),
-              IconButton.outlined(
-                tooltip: 'Mis Fidelizaciones',
-                onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const MyLoyaltyScreen())),
-                icon: const Icon(Icons.loyalty_outlined),
-              ),
+            ]),
+            const SizedBox(height: 16),
+            Row(children: [
+              _StatBox(label: 'Nivel', value: '$level'),
+              const SizedBox(width: 8),
+              _StatBox(
+                  label: 'Semanas', value: '🔥 ${_stats?.weeklyStreak ?? 0}'),
+              const SizedBox(width: 8),
+              _StatBox(
+                  label: 'Check-ins',
+                  value: '${_stats?.checkinsCount ?? _checkins.length}'),
             ]),
             const SizedBox(height: 12),
             ClipRRect(
@@ -291,30 +275,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: AppText.labelMd,
               ),
             ),
-            const SizedBox(height: 16),
-            Row(children: [
-              _StatBox(label: 'Nivel', value: '$level'),
-              const SizedBox(width: 8),
-              _StatBox(label: 'Puntos', value: '$xp'),
-              const SizedBox(width: 8),
-              _StatBox(
-                  label: 'Check-ins',
-                  value: '${_stats?.checkinsCount ?? _checkins.length}'),
-            ]),
-            const SizedBox(height: 12),
-            _ProfileLinkRow(
-              icon: Icons.favorite_border_rounded,
-              label: 'Guardados',
-              onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const FavoritesScreen())),
-            ),
             const SizedBox(height: 22),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('Insignias', style: AppText.titleLg),
-              Text('Ver todas',
-                  style: AppText.bodyMd.copyWith(
-                      color: AppColors.primary, fontWeight: FontWeight.w600)),
-            ]),
+            Text('Insignias', style: AppText.titleLg),
             const SizedBox(height: 10),
             Builder(builder: (context) {
               final earned = _badges.where((b) => b.unlocked).toList();
@@ -353,40 +315,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
               );
             }),
-            const SizedBox(height: 22),
-            Row(children: [
-              Expanded(
-                  child: Text('Mi Mapa de Wuarikes', style: AppText.titleLg)),
-              Text('${_checkins.length} lugares visitados',
-                  style: AppText.labelMd),
-            ]),
+            const SizedBox(height: 16),
+            _ProfileLinkRow(
+              icon: Icons.map_outlined,
+              label: 'Mi mapa',
+              subtitle: '${_checkins.length} lugares visitados',
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => _MyMapScreen(markers: _placeMarkers()))),
+            ),
             const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              child: SizedBox(
-                height: 160,
-                child: placeMarkers.isEmpty
-                    ? Container(
-                        color: AppColors.primaryContainer,
-                        child: Center(
-                            child: Text(
-                                'Haz tu primer check-in para ver tu mapa',
-                                style: AppText.bodyMd)))
-                    : IgnorePointer(
-                        child: FlutterMap(
-                          options: MapOptions(
-                            initialCenter: placeMarkers.first.point,
-                            initialZoom: 12,
-                            interactionOptions: const InteractionOptions(
-                                flags: InteractiveFlag.none),
-                          ),
-                          children: [
-                            buildMapboxTileLayer(),
-                            MarkerLayer(markers: placeMarkers)
-                          ],
-                        ),
-                      ),
-              ),
+            _ProfileLinkRow(
+              icon: Icons.favorite_border_rounded,
+              label: 'Guardados',
+              onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const FavoritesScreen())),
+            ),
+            const SizedBox(height: 8),
+            _ProfileLinkRow(
+              icon: Icons.people_outline_rounded,
+              label: 'Mis amigos',
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => FriendsScreen(api: widget.api))),
+            ),
+            const SizedBox(height: 8),
+            _ProfileLinkRow(
+              icon: Icons.bolt_outlined,
+              label: 'Mis publicaciones',
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => MyPostsScreen(api: widget.api))),
+            ),
+            const SizedBox(height: 8),
+            _ProfileLinkRow(
+              icon: Icons.chat_bubble_outline_rounded,
+              label: 'Mensajes',
+              onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MessagesScreen())),
             ),
             const SizedBox(height: 22),
             Text('Check-ins Recientes', style: AppText.titleLg),
@@ -397,7 +360,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.surfaceContainerLowest,
                       border: Border.all(color: AppColors.border),
                       borderRadius: BorderRadius.circular(12)),
                   child: Row(children: [
@@ -482,9 +445,13 @@ class _FollowStat extends StatelessWidget {
 class _ProfileLinkRow extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String? subtitle;
   final VoidCallback onTap;
   const _ProfileLinkRow(
-      {required this.icon, required this.label, required this.onTap});
+      {required this.icon,
+      required this.label,
+      this.subtitle,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -501,9 +468,38 @@ class _ProfileLinkRow extends StatelessWidget {
         title: Text(label,
             style: AppText.bodyMd.copyWith(
                 color: AppColors.onSurface, fontWeight: FontWeight.w600)),
+        subtitle:
+            subtitle == null ? null : Text(subtitle!, style: AppText.labelMd),
         trailing: const Icon(Icons.chevron_right_rounded,
             color: AppColors.onSurfaceVariant),
       ),
+    );
+  }
+}
+
+/// "Mi mapa": los huariques donde hice check-in, en un mapa que se mueve.
+class _MyMapScreen extends StatelessWidget {
+  final List<Marker> markers;
+  const _MyMapScreen({required this.markers});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(title: const Text('Mi mapa')),
+      body: markers.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('Haz tu primer check-in para ver tu mapa',
+                    textAlign: TextAlign.center, style: AppText.bodyMd),
+              ),
+            )
+          : FlutterMap(
+              options: MapOptions(
+                  initialCenter: markers.first.point, initialZoom: 12),
+              children: [buildMapboxTileLayer(), MarkerLayer(markers: markers)],
+            ),
     );
   }
 }
@@ -519,7 +515,7 @@ class _StatBox extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surfaceContainerLowest,
             border: Border.all(color: AppColors.border),
             borderRadius: BorderRadius.circular(12)),
         child: Column(children: [
