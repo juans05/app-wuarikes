@@ -14,11 +14,14 @@ const checkinChips = [
   '🫶 Buena atención'
 ];
 
-/// Puntos que da el backend (`CheckinsService.create`): 10, más 5 con foto.
+/// Puntos que da el backend (`CheckinsService.create`): 10, más 5 con foto, o más
+/// 10 si el local aún no tiene ninguna (la tuya pasa a ser su portada).
 const checkinBasePoints = 10;
 const checkinPhotoPoints = 5;
-int checkinPoints({required bool hasPhoto}) =>
-    checkinBasePoints + (hasPhoto ? checkinPhotoPoints : 0);
+const checkinFirstPhotoPoints = 10;
+int checkinPoints({required bool hasPhoto, bool firstPhoto = false}) =>
+    checkinBasePoints +
+    (hasPhoto ? (firstPhoto ? checkinFirstPhotoPoints : checkinPhotoPoints) : 0);
 
 /// Largo del texto libre. El backend acepta 200 caracteres en el comentario
 /// (`CreateCheckinDto`); con los 4 chips (55) y el " — " (3) sobran 142.
@@ -95,10 +98,16 @@ class _NewCheckinScreenState extends State<NewCheckinScreen> {
     }
   }
 
+  /// El local no tiene portada: pedimos su primera foto. Solo con cámara, para que
+  /// sea del lugar y de hoy, no una imagen cualquiera de la galería.
+  bool get _firstPhoto => (widget.place.coverImageUrl ?? '').isEmpty;
+
   Future<void> _pickPhoto() async {
     final file = await (widget.pickPhoto?.call() ??
         ImagePicker().pickImage(
-            source: ImageSource.gallery, imageQuality: 80, maxWidth: 1600));
+            source: _firstPhoto ? ImageSource.camera : ImageSource.gallery,
+            imageQuality: 80,
+            maxWidth: 1600));
     if (file != null && mounted) setState(() => _photo = file);
   }
 
@@ -178,7 +187,7 @@ class _NewCheckinScreenState extends State<NewCheckinScreen> {
         _statsAfter = after;
         _earnedPoints = (after != null && _statsBefore != null)
             ? after.xp - _statsBefore!.xp
-            : checkinPoints(hasPhoto: photoUrl != null);
+            : checkinPoints(hasPhoto: photoUrl != null, firstPhoto: _firstPhoto);
       });
     } catch (e) {
       if (mounted) {
@@ -201,7 +210,8 @@ class _NewCheckinScreenState extends State<NewCheckinScreen> {
       );
     }
 
-    final projectedPoints = checkinPoints(hasPhoto: _photo != null);
+    final projectedPoints =
+        checkinPoints(hasPhoto: _photo != null, firstPhoto: _firstPhoto);
 
     final dishes = _dishes;
     final showDishField = _otro || dishes.isEmpty;
@@ -337,7 +347,10 @@ class _NewCheckinScreenState extends State<NewCheckinScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 18),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppColors.border),
+                          border: Border.all(
+                              color: _firstPhoto
+                                  ? AppColors.primary
+                                  : AppColors.border),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -345,16 +358,22 @@ class _NewCheckinScreenState extends State<NewCheckinScreen> {
                             const Icon(Icons.add_a_photo_outlined,
                                 color: AppColors.onSurfaceVariant),
                             const SizedBox(width: 8),
-                            Text.rich(
-                                const TextSpan(children: [
-                                  TextSpan(text: 'Agrega foto · '),
-                                  TextSpan(
-                                      text: '+$checkinPhotoPoints pts',
-                                      style: TextStyle(
-                                          color: AppColors.primary,
-                                          fontWeight: FontWeight.w700)),
-                                ]),
-                                style: AppText.bodyMd),
+                            Flexible(
+                              child: Text.rich(
+                                  TextSpan(children: [
+                                    TextSpan(
+                                        text: _firstPhoto
+                                            ? 'Este local no tiene foto, ¡sé el primero! · '
+                                            : 'Agrega foto · '),
+                                    TextSpan(
+                                        text:
+                                            '+${_firstPhoto ? checkinFirstPhotoPoints : checkinPhotoPoints} pts',
+                                        style: const TextStyle(
+                                            color: AppColors.primary,
+                                            fontWeight: FontWeight.w700)),
+                                  ]),
+                                  style: AppText.bodyMd),
+                            ),
                           ],
                         ),
                       ),

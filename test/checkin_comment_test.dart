@@ -26,11 +26,18 @@ Position _at(double lat, double lng) => Position(
       speedAccuracy: 0,
     );
 
+/// Por defecto con portada: el local ya tiene foto y la del check-in es un extra.
 Place _place(
-        {List<String> dishes = const ['Ceviche clásico', 'Leche de tigre']}) =>
-    Place(id: 'p1', name: 'El Chinito', dishes: [
-      for (var i = 0; i < dishes.length; i++) Dish(id: 'd$i', name: dishes[i]),
-    ]);
+        {List<String> dishes = const ['Ceviche clásico', 'Leche de tigre'],
+        String? cover = 'https://res.cloudinary.com/x/image/upload/c.jpg'}) =>
+    Place(
+        id: 'p1',
+        name: 'El Chinito',
+        coverImageUrl: cover,
+        dishes: [
+          for (var i = 0; i < dishes.length; i++)
+            Dish(id: 'd$i', name: dishes[i]),
+        ]);
 
 /// Servidor de mentira: anota las peticiones y contesta el check-in y las stats.
 class _Fake {
@@ -156,9 +163,11 @@ void main() {
     });
   });
 
-  test('puntos: 10, y 5 más con foto (los del backend)', () {
+  test('puntos: 10, 5 más con foto, 10 más si es la primera del local', () {
     expect(checkinPoints(hasPhoto: false), 10);
     expect(checkinPoints(hasPhoto: true), 15);
+    expect(checkinPoints(hasPhoto: true, firstPhoto: true), 20);
+    expect(checkinPoints(hasPhoto: false, firstPhoto: true), 10);
   });
 
   group('pantalla', () {
@@ -188,6 +197,25 @@ void main() {
 
       await _tap(tester, find.byIcon(Icons.close)); // quita la foto
       expect(find.text('+10 pts'), findsOneWidget);
+    });
+
+    testWidgets('local sin portada: pide la primera foto y sube a 20 puntos',
+        (tester) async {
+      await _pump(tester, _Fake(),
+          place: _place(cover: null), photo: XFile('/no/existe.jpg'));
+
+      expect(find.textContaining('sé el primero'), findsOneWidget);
+      expect(find.textContaining('+10 pts'), findsWidgets);
+
+      await _tap(tester, find.byIcon(Icons.add_a_photo_outlined));
+      expect(find.text('+20 pts'), findsOneWidget);
+    });
+
+    testWidgets('local con portada: no pide la primera foto', (tester) async {
+      await _pump(tester, _Fake());
+
+      expect(find.textContaining('sé el primero'), findsNothing);
+      expect(find.textContaining('Agrega foto'), findsOneWidget);
     });
 
     testWidgets('el comentario enviado es buildCheckinComment(chips, texto)',
